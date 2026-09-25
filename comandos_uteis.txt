@@ -1,0 +1,17 @@
+Prisma ---> Neon
+1 - npx prisma contract emit
+2 - npx prisma migration plan --name nome_direnteAqui_Sempre
+3 - npx prisma db migrate --advance-ref db
+4 - npx prisma skills sync
+
+
+Neon --> Prisma
+ 1 - npx prisma contract infer
+ 2 - npx prisma contract emit
+ 3 - npx prisma db sign
+
+ 
+
+ ############### Instalação de bibliotecas #######################
+
+ npm install temporal-polyfill

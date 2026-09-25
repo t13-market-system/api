@@ -1,0 +1,86 @@
+[
+  {
+    "id": "dropColumn.teste.nome_cliente",
+    "label": "Drop column \"nome_cliente\" from \"teste\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "nome_cliente",
+        "table": "teste"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"nome_cliente\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "teste",
+          "nome_cliente"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop column \"nome_cliente\"",
+        "sql": "ALTER TABLE \"public\".\"teste\" DROP COLUMN \"nome_cliente\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"nome_cliente\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "teste",
+          "nome_cliente"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.teste.nome_test",
+    "label": "Add column \"nome_test\" to \"teste\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "nome_test",
+        "table": "teste"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"nome_test\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "teste",
+          "nome_test"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"nome_test\"",
+        "sql": "ALTER TABLE \"public\".\"teste\" ADD COLUMN \"nome_test\" character varying"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"nome_test\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "teste",
+          "nome_test"
+        ]
+      }
+    ]
+  }
+]

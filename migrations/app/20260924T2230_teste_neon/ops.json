@@ -1,0 +1,161 @@
+[
+  {
+    "id": "table.cliente",
+    "label": "Create table \"cliente\"",
+    "summary": "Creates table \"cliente\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "cliente"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"cliente\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cliente\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"cliente\"",
+        "sql": "CREATE TABLE \"public\".\"cliente\" (\n  \"email_cliente\" character varying,\n  \"id_cliente\" SERIAL NOT NULL,\n  \"nome_cliente\" character varying,\n  CONSTRAINT \"cliente_pkey\" PRIMARY KEY (\"id_cliente\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"cliente\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cliente\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.tel_cliente",
+    "label": "Create table \"tel_cliente\"",
+    "summary": "Creates table \"tel_cliente\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "tel_cliente"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"tel_cliente\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"tel_cliente\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"tel_cliente\"",
+        "sql": "CREATE TABLE \"public\".\"tel_cliente\" (\n  \"id_cliente\" int4,\n  \"id_tel_cliente\" SERIAL NOT NULL,\n  CONSTRAINT \"tel_cliente_pkey\" PRIMARY KEY (\"id_tel_cliente\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"tel_cliente\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"tel_cliente\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.teste",
+    "label": "Create table \"teste\"",
+    "summary": "Creates table \"teste\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "teste"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"teste\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"teste\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"teste\"",
+        "sql": "CREATE TABLE \"public\".\"teste\" (\n  \"id_Teste\" SERIAL NOT NULL,\n  \"nome_cliente\" character varying,\n  CONSTRAINT \"idTeste_pkey\" PRIMARY KEY (\"id_Teste\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"teste\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"teste\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.tel_cliente.cliente_fk",
+    "label": "Add foreign key \"cliente_fk\" on \"tel_cliente\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "cliente_fk",
+        "table": "tel_cliente"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"cliente_fk\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "cliente_fk",
+          "public",
+          "\"public\".\"tel_cliente\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"cliente_fk\"",
+        "sql": "ALTER TABLE \"public\".\"tel_cliente\"\nADD CONSTRAINT \"cliente_fk\"\nFOREIGN KEY (\"id_cliente\")\nREFERENCES \"public\".\"cliente\" (\"id_cliente\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"cliente_fk\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "cliente_fk",
+          "public",
+          "\"public\".\"tel_cliente\""
+        ]
+      }
+    ]
+  }
+]

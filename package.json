@@ -1,0 +1,44 @@
+{
+  "name": "API REST Node.js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "prisma skills sync || exit 0",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "Digo Fragoso da Silva",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^7.10.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "pg": "^8.23.0",
+    "temporal-polyfill": "^1.0.5",
+    "winston": "^3.19.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@prisma/orm-postgres": "^8.0.0-rc.11",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.6.2",
+    "dotenv": "^18.0.3",
+    "prisma": "^8.0.0-rc.15",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
