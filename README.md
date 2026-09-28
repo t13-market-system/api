@@ -11,6 +11,7 @@ Passo 2: Instalando as Dependências Principais (Produção)
 Agora vamos instalar o "motor" da nossa aplicação. Essas são as bibliotecas que rodarão no servidor final:
 
 
+````bash
 npm install express pg @prisma/client bcrypt jsonwebtoken zod helmet cors express-rate-limit morgan winston
 Core & Banco de dados: express (rotas), @prisma/client e pg (comunicação com banco PostgreSQL).
 
