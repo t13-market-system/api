@@ -1,7 +1,7 @@
 Construindo uma API com Express.js, TypeScript e Prisma
 Este guia apresenta o passo a passo para a construção da nossa API. Siga as instruções abaixo para configurar o ambiente corretamente.
 
-Passo 1: Inicializando o Projeto
+#Passo 1: Inicializando o Projeto
 O primeiro passo é criar o arquivo package.json, que funcionará como a "identidade" do nosso projeto. Ele guardará a lista de todas as bibliotecas que vamos usar e os scripts de execução.
 
 No terminal do VS Code, execute o comando abaixo (a flag -y pula as perguntas e preenche tudo com o padrão):
