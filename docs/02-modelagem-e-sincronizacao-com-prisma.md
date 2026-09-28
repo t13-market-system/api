@@ -64,7 +64,7 @@ export default definePrismaConfig({
 
 ```
 
-## Sicrnonizar o banco de dados
+## 11 - Sicrnonizar o banco de dados
 
 No terminal do VS Code, execute os comandos abaixo:
 obs.: Veifique se o prisma foi instalado com as dependências de desenvolvimento
