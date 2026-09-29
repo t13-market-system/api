@@ -8,6 +8,10 @@
       "model": "Cliente",
       "namespace": "public"
     },
+    "fornecedor": {
+      "model": "Fornecedor",
+      "namespace": "public"
+    },
     "tel_cliente": {
       "model": "TelCliente",
       "namespace": "public"
@@ -80,6 +84,47 @@
               },
               "namespaceId": "public",
               "table": "cliente"
+            }
+          },
+          "Fornecedor": {
+            "fields": {
+              "emailFornecedor": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar"
+                }
+              },
+              "idFornecedor": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "nomeFornecedor": {
+                "nullable": true,
+                "type": {
+                  "codecId": "sql/varchar@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "emailFornecedor": {
+                  "column": "email_fornecedor"
+                },
+                "idFornecedor": {
+                  "column": "id_fornecedor"
+                },
+                "nomeFornecedor": {
+                  "column": "nome_fornecedor"
+                }
+              },
+              "namespaceId": "public",
+              "table": "fornecedor"
             }
           },
           "TelCliente": {
@@ -263,6 +308,38 @@
               },
               "uniques": []
             },
+            "fornecedor": {
+              "columns": {
+                "email_fornecedor": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true
+                },
+                "id_fornecedor": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "nome_fornecedor": {
+                  "codecId": "sql/varchar@1",
+                  "nativeType": "character varying",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id_fornecedor"
+                ],
+                "name": "fornecedor_pkey"
+              },
+              "uniques": []
+            },
             "tel_cliente": {
               "columns": {
                 "id_cliente": {
@@ -394,7 +471,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "0a290316529d86579865bf5b51988c540098ed83fead7cbe86cf7da4a8c6ef95"
+    "storageHash": "3122a1077d021b169d6267a40d6e536aee78dbae2a8183497e42ea883b5e29f4"
   },
   "capabilities": {
     "postgres": {
