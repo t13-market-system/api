@@ -92,4 +92,4 @@ Se você já criar as tabelas manualmente no banco de dados e quiser sincronizá
 > 3. Gera os tipos do TypeScript dentro da sua pasta `node_modules` para garantir 100% de segurança no código (`Type-Safety`).
 
 ---
-➡️ *Pronto para programar? Siga para a Parte 3:* `03-criando-rotas-serv-contro.md`
+➡️ *Pronto para programar? Siga para a Parte 3:* [03-criando-rotas-serv-contro.md](./03-criando-rotas-serv-contro.md)

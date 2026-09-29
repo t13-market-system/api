@@ -203,3 +203,6 @@ app.listen(port, () => {
 > [!IMPORTANT]  
 > **Tudo Pronto! 🎉**  
 > Volte para o seu CMD e rode o comando `npm run dev`. O seu projeto agora tem uma separação de camadas limpa, uma integração moderna com o Prisma 8, e está com o servidor perfeitamente exposto para a internet!
+
+---
+➡️ *Quer mais segurança? Siga para a Parte 4:* [04-validacao-de-dados-com-zod.md](./04-validacao-de-dados-com-zod.md)

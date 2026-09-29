@@ -134,4 +134,4 @@ JWT_SECRET="sua_chave_secreta_para_os_tokens_aqui"
 > - **JWT_SECRET**: Use uma string aleatória forte (Ex: `@1093b^2&Fh#j*zU`).
 
 ---
-➡️ *Tudo pronto! Siga para a Parte 2:* `02-modelagem-e-sincronizacao-com-prisma.md`
+➡️ *Tudo pronto! Siga para a Parte 2:* [02-modelagem-e-sincronizacao-com-prisma.md](./02-modelagem-e-sincronizacao-com-prisma.md)

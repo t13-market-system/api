@@ -58,6 +58,21 @@ Siga os tutoriais abaixo na ordem apresentada para reconstruir esse projeto do z
 4️⃣ **[Validação de Dados com Zod e Middlewares](./docs/04-validacao-de-dados-com-zod.md)**  
 *Criação de esquemas do Zod e de um middleware interceptador para limpar e validar os dados antes do Controller.*
 
+5️⃣ **[Autenticação com JWT e Rotas Protegidas](./docs/05-autenticacao-com-jwt.md)**  
+*Implementação do sistema de Login, geração de Tokens JWT e proteção de rotas privadas usando middlewares.*
+
+6️⃣ **[Monitorização e Logs com Winston](./docs/06-monitorizacao-e-logs-com-winston.md)**  
+*Substituição do `console.log` por um sistema profissional de logs que registra acessos, erros e avisos em arquivos físicos e terminal colorido.*
+
+7️⃣ **[Segurança: Rate Limit, Helmet e CORS](./docs/07-seguranca-e-rate-limit.md)**  
+*Configuração de proteções contra ataques DDoS, força bruta e restrição de acesso por domínios, tornando a API pronta para produção.*
+
+8️⃣ **[Documentação Interativa com Swagger](./docs/08-documentacao-com-swagger.md)**  
+*Implementação da interface gráfica do Swagger UI para testar endpoints e visualizar a documentação diretamente pelo navegador.*
+
+9️⃣ **[Introdução aos Testes Automatizados](./docs/09-testes-automatizados-vitest.md)**  
+*Instalação e configuração do Vitest e Supertest para garantir a estabilidade do código contra quebras e regressões.*
+
 ---
 > [!TIP]  
 > **Dica de Ouro:** Não copie e cole os códigos cegamente! Digite-os, entenda o fluxo dos dados (Rota ➡️ Controller ➡️ Service ➡️ Banco) e você dominará a criação de backends em pouquíssimo tempo! 🚀

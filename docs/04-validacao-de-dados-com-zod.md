@@ -128,3 +128,6 @@ export class UserController {
 > [!TIP]  
 > **Segurança e Agilidade!** 🚀  
 > Com essa abordagem, o seu `UserController` tem a garantia absoluta de que `req.body` contém os dados no formato exato que ele espera (exigido pelo Zod). Nenhum payload malicioso ou mal formatado chegará à camada de Serviços!
+
+---
+➡️ *Quer trancar as portas da sua API? Siga para a Parte 5:* [05-autenticacao-com-jwt.md](./05-autenticacao-com-jwt.md)
