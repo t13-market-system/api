@@ -6,10 +6,6 @@ export class UserController {
   static async createUser(req: Request, res: Response) {
     const { name, email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
-    }
-
     try {
       const novoUser = await UserService.createUser({ name, email, password });
       

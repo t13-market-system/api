@@ -31,6 +31,7 @@ Nossa arquitetura está dividida em camadas **MVC** bem definidas. Esta organiza
  ┃ ┣ 📂 lib          # 📦 Instâncias globais (ex: src/lib/prisma.ts contendo o Singleton do BD)
  ┃ ┣ 📂 middlewares  # 🛡️ Interceptadores de requisições (Autenticação JWT, Validação Zod, etc.)
  ┃ ┣ 📂 routes       # 📍 O mapa de URLs da API (ex: rotas de usuários, clientes)
+ ┃ ┣ 📂 schemas      # 🧩 Regras e esquemas de validação de dados (Zod)
  ┃ ┣ 📂 services     # ❤️ O coração: regras de negócio exclusivas e comunicação com o Prisma
  ┃ ┗ 📜 server.ts    # 🟢 Arquivo principal que inicializa o Express e agrupa as rotas
  ┣ 📜 prisma.config.ts # ⚙️ Configuração central de ambiente do Prisma 8
@@ -53,6 +54,9 @@ Siga os tutoriais abaixo na ordem apresentada para reconstruir esse projeto do z
 
 3️⃣ **[Criando Rotas, Serviços e Controladores](./docs/03-criando-rotas-serv-contro.md)**  
 *A separação limpa das camadas MVC, construção do CRUD de Usuários e o engate final das rotas no `server.ts`.*
+
+4️⃣ **[Validação de Dados com Zod e Middlewares](./docs/04-validacao-de-dados-com-zod.md)**  
+*Criação de esquemas do Zod e de um middleware interceptador para limpar e validar os dados antes do Controller.*
 
 ---
 > [!TIP]  
