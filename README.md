@@ -39,4 +39,6 @@ Nossa arquitetura está dividida em camadas bem definidas. Esta organização (s
  ┗ 📜 tsconfig.json  # Regras de compilação do TypeScript
  ```
 
- # 1 - [01-prepacao-do-ambiente](./docs/01-prepacao-do-ambiente.md)
+ # 1 - [01 - Preparação do Ambiente](./docs/01-prepacao-do-ambiente.md)
+ # 2 - [02 - Modelagem-e-sincronizacao-com-prisma](./docs/02-modelagem-e-sincronizacao-com-prisma.md)
+ # 3 - [02 - Criando Rotas,  Services e  Controllers](./docs/03-criando-rotas-serv-contro.md)
