@@ -53,3 +53,6 @@ Abra o arquivo `package.json` na raiz do seu projeto, encontre a seção `"scrip
 > [!IMPORTANT]  
 > **Terreno Preparado! 🚀**  
 > Agora que o ambiente de testes está impecável, no próximo módulo nós colocaremos a mão na massa para escrever o nosso primeiro script de teste de integração da rota de Criação de Usuários!
+
+---
+➡️ *Cansado de digitar os mesmos códigos? Siga para a Parte 10:* [10-automacao-e-geracao-de-codigo.md](./10-automacao-e-geracao-de-codigo.md)

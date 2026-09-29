@@ -73,6 +73,9 @@ Siga os tutoriais abaixo na ordem apresentada para reconstruir esse projeto do z
 9️⃣ **[Introdução aos Testes Automatizados](./docs/09-testes-automatizados-vitest.md)**  
 *Instalação e configuração do Vitest e Supertest para garantir a estabilidade do código contra quebras e regressões.*
 
+🔟 **[Automação e Produtividade com Plop.js](./docs/10-automacao-e-geracao-de-codigo.md)**  
+*Como abandonar a digitação repetitiva criando um script gerador de código que cria Serviços, Controladores e Rotas em menos de 1 segundo.*
+
 ---
 > [!TIP]  
 > **Dica de Ouro:** Não copie e cole os códigos cegamente! Digite-os, entenda o fluxo dos dados (Rota ➡️ Controller ➡️ Service ➡️ Banco) e você dominará a criação de backends em pouquíssimo tempo! 🚀
