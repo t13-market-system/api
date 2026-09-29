@@ -1,4 +1,4 @@
-  # Vamos modelar nosso bando de dados conforme as necessidades da aplicação.
+  # Vamos modelar nosso banco de dados conforme às necessidades da aplicação.
 
 ## 9. ## Passo 9: Configurar a Instância do Prisma (A Ligação Global)
 
