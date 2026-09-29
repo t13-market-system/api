@@ -1,8 +1,14 @@
-Prisma ---> Neon
+Fluxo Rápido (Local/Dev - SEM gerar arquivo de migration):
+1 - npx prisma contract emit
+2 - npx prisma db update
+
+Fluxo Formal (Produção - COM geração de arquivo de migration):
 1 - npx prisma contract emit
 2 - npx prisma migration plan --name nome_direnteAqui_Sempre
 3 - npx prisma db migrate --advance-ref db
-4 - npx prisma skills sync
+
+Sincronizar IA do Prisma:
+1 - npx prisma skills sync
 
 
 Neon --> Prisma
