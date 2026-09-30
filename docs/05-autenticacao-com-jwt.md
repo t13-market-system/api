@@ -188,5 +188,35 @@ export default app;
 > **Pronto! Sua API agora tem controle de acesso profissional.** 🚀  
 > Teste o seu login enviando um POST para `/login`, copie o `token` gerado, e envie-o no Header `Authorization` como `Bearer SEU_TOKEN_AQUI` para conseguir listar os usuários no `/users`!
 
+## 2️⃣5️⃣ Configurando o CORS para o Front-End
+
+Para que uma aplicação Front-End (como o React) rodando em uma porta diferente (ex: `5173`) consiga bater no `/login` e trafegar cookies via Axios de forma segura, precisamos configurar a permissão de **CORS**. 
+
+Pare a sua API e instale o pacote:
+```bash
+npm install cors
+npm install -D @types/cors
+```
+
+Crie o arquivo `src/middlewares/cors.middleware.ts`:
+```typescript
+import cors from 'cors';
+
+export const corsMiddleware = cors({
+  origin: 'http://localhost:5173', // A exata URL do seu Front-End
+  credentials: true, // Permite que a API receba/envie Cookies (HttpOnly)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
+  allowedHeaders: ['Content-Type', 'Authorization'] // Cabeçalhos permitidos
+});
+```
+
+E ative ele no seu `src/server.ts` **antes** das rotas:
+```typescript
+import { corsMiddleware } from './middlewares/cors.middleware';
+
+// ...
+app.use(corsMiddleware); // <- Adicione aqui, antes do app.use(express.json()) e das rotas
+```
+
 ---
 ➡️ *Que tal registrar tudo o que acontece? Siga para a Parte 6:* [06-monitorizacao-e-logs-com-winston.md](./06-monitorizacao-e-logs-com-winston.md)
