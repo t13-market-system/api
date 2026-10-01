@@ -2,11 +2,20 @@ import { Request , Response , NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    // Busca o token nos cookies ou no header Authorization
+    let token = req.cookies?.token;
+
+    if (!token) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            [, token] = authHeader.split(' ');
+        }
+    }
+
+    if (!token) {
         return res.status(401).json({ error: 'Token nao fornecido' });
     }
-    const [, token] = authHeader.split(' ');
+    
     try {
         const secret = process.env.JWT_SECRET || 'chave-secreta-fallback';
         const decoded = jwt.verify(token, secret);

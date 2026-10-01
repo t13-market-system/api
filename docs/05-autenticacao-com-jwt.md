@@ -218,5 +218,59 @@ import { corsMiddleware } from './middlewares/cors.middleware';
 app.use(corsMiddleware); // <- Adicione aqui, antes do app.use(express.json()) e das rotas
 ```
 
+## 2️⃣6️⃣ Salvando o Token em Cookie HTTP Only
+
+Para enviar e ler cookies no seu servidor (aumentando a segurança e evitando armazenar tokens no `localStorage` do frontend), precisamos do pacote `cookie-parser`.
+
+Instale o pacote:
+```bash
+npm install cookie-parser
+npm install -D @types/cookie-parser
+```
+
+Ative ele no seu `src/server.ts` logo após o CORS:
+```typescript
+import cookieParser from 'cookie-parser';
+
+// ...
+app.use(corsMiddleware); // Nosso middleware de CORS
+app.use(cookieParser()); // Middleware para ler cookies
+```
+
+Agora, no seu `src/controllers/auth.controller.ts`, configure para enviar o token pelo cookie quando o login tiver sucesso:
+```typescript
+            const result = await AuthService.login({ email, password });
+            
+            // Salvando o token em um cookie HTTP Only
+            res.cookie('token', result.token, {
+                httpOnly: true,       // Protege contra XSS
+                secure: false,        // Use 'true' em produção com HTTPS
+                sameSite: 'lax',      // Bom para segurança entre a mesma origem
+                maxAge: 24 * 60 * 60 * 1000 // 1 dia
+            });
+
+            return res.status(200).json(result);
+```
+
+Por fim, atualize o `src/middlewares/auth.middleware.ts` para que ele consiga extrair o token que está vindo dos cookies em todas as requisições autenticadas:
+```typescript
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // Busca o token nos cookies ou no header Authorization
+    let token = req.cookies?.token;
+
+    if (!token) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            [, token] = authHeader.split(' ');
+        }
+    }
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token nao fornecido' });
+    }
+    
+    // ... restante do código do middleware
+```
+
 ---
 ➡️ *Que tal registrar tudo o que acontece? Siga para a Parte 6:* [06-monitorizacao-e-logs-com-winston.md](./06-monitorizacao-e-logs-com-winston.md)
