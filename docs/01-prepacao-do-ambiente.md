@@ -33,7 +33,7 @@ npm install express pg @prisma/client bcrypt jsonwebtoken zod helmet cors expres
 Como estamos usando TypeScript, precisamos instalar suas tipagens (`@types/*`) e ferramentas para rodar o código localmente.
 
 ```bash
-npm install -D prisma@8.0.0-rc.14 typescript @types/node @types/express @types/bcrypt @types/jsonwebtoken @types/cors @types/morgan tsx @prisma/orm-postgres@8.0.0-rc.14 dotenv
+npm install -D prisma@8.0.0-rc.15 typescript @types/node @types/express @types/bcrypt @types/jsonwebtoken @types/cors @types/morgan tsx @prisma/orm-postgres@8.0.0-rc.11 dotenv
 ```
 
 ## 4️⃣ Configuração do TypeScript
