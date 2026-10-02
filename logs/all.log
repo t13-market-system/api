@@ -66,3 +66,5 @@
 2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 200 8659 - 0.387 ms[39m
 2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 304 - - 2.328 ms[39m
 2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/favicon-32x32.png 304 - - 1.845 ms[39m
+2026-10-01 21:33:05:335 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 21:33:05:335 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
