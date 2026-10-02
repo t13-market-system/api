@@ -81,6 +81,11 @@ npx prisma@latest orm init --target postgres
 > 
 > *(Dica ninja: Para rodar sem perguntas e criar tudo magicamente no local certo, use o comando completo: `npx prisma@latest orm init --yes --target postgres --authoring psl --schema-path prisma/contract.prisma`)*
 
+> [!WARNING]  
+> **Atenção: Erro `CLI.CONSENT_REQUIRED` (Re-inicialização)**
+> Se ao executar o comando acima você receber a mensagem `[CLI.CONSENT_REQUIRED] "Re-initializing replaces prisma.config.ts..."`, isso significa que os arquivos de configuração **já existem** na pasta (porque uma tentativa anterior rodou até a metade).
+> **Como resolver:** Se quiser inicializar do zero, você precisa apagar manualmente o arquivo `prisma.config.ts`, `prisma-8.md` e a pasta `prisma/` antes de rodar o comando novamente. Alternativamente, você pode rodar a versão interativa `npx prisma@latest orm init --target postgres`, e quando ele pedir confirmação ("Grant it by passing --confirm..."), basta digitar o nome da sua pasta para autorizar a sobrescrita.
+
 > [!TIP]  
 > **O que acabou de ser gerado?**
 > - **Pasta `prisma/` com `contract.prisma`:** No Prisma 8, este arquivo é o coração do seu banco.
