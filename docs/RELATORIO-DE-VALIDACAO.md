@@ -1,15 +1,20 @@
+<!-- Documento: docs/RELATORIO-DE-VALIDACAO.md -->
+
 # Registro de validação da documentação
 
 [← Índice](../README.md) · [Lista para repetir a aprovação](11-validacao-ponta-a-ponta.md) · [Evidências em JSON](evidencias/2026-10-02-api5.json)
 
 **Data:** 2 de outubro de 2026. **Resultado:** os onze capítulos passaram em sequência na tentativa `api5`, com banco real e navegador.
 
-> [!NOTE]
+> **ℹ️ Observação**
+>
 > Esta aprovação descreve uma execução nas versões abaixo. Não é uma garantia de ausência de bugs em qualquer ambiente ou versão futura. A aplicação antiga do repositório não foi convertida: a API validada foi construída em uma pasta nova seguindo o guia.
 
 ## Método e ambiente
 
 Os comandos CMD foram executados na ordem dos capítulos. Os blocos de arquivos foram copiados literalmente do Markdown, e os scripts foram acumulados conforme as instruções. Ao final, os **40 arquivos identificados no guia** foram comparados com os arquivos executados, sem diferenças.
+
+Essa comparação descreve a execução completa em `api5`, anterior aos comentários de identificação acrescentados na revisão didática abaixo. Os registros daquela execução foram preservados; a revisão recebeu uma evidência separada.
 
 A conexão fornecida em `api/.env` foi usada para criar dois bancos vazios e exclusivos desta tentativa. A pasta `api`, suas credenciais e suas tabelas foram preservadas. Cada ambiente recebeu uma chave JWT aleatória de 64 caracteres. O `.env.example` usado corresponde ao [modelo público do projeto](../.env.example); ele não contém credenciais reais.
 
@@ -39,6 +44,29 @@ A conexão fornecida em `api/.env` foi usada para criar dois bancos vazios e exc
 A falha de `api4` não aparecia no build nem em `/health`: a consulta gravava o usuário, mas falhava ao decodificar `createdAt`. Foram acrescentados o pacote de execução e o import `temporal-polyfill/full/global` aos capítulos 1 e 2, além das explicações e do diagnóstico. A validação inteira foi repetida, sem aproveitar os arquivos ou migrações de `api4`.
 
 As pastas anteriores foram mantidas para diagnóstico. Seus bancos podem conter estruturas parciais; não são o ambiente aprovado.
+
+## Revisão didática após a validação funcional
+
+Depois da execução completa, os onze capítulos e o README foram revisados para uma primeira experiência de construção de API:
+
+- Os **56 exemplos de arquivo** passaram a mostrar o caminho acima do bloco e no cabeçalho do código. O contrato Prisma preserva `// use prisma-8` na primeira linha.
+- Os **64 passos numerados** receberam uma explicação de seu propósito. Foram detalhados a raiz da API, os terminais, a configuração de ambiente, a edição de scripts, a renovação do token e o uso dos botões do Swagger.
+- Os avisos passaram a exibir **Atenção**, **Importante**, **Observação** e **Dica** em português, usando títulos em negrito dentro de citações Markdown.
+- Os arquivos `tsconfig` usam `jsonc`, que permite o comentário de identificação; os trechos de `package.json` continuam em JSON sem comentários internos.
+- Os templates Plop identificam tanto o modelo de texto quanto o caminho correto de cada arquivo gerado.
+
+A lógica dos **40 arquivos distintos** e os scripts foram comparados com a versão aprovada, ignorando somente os novos comentários de cabeçalho. O contrato emitido permaneceu idêntico. Em uma cópia isolada, passaram novamente a geração dos quatro arquivos Cliente, a conferência de tipos, o build, os **23 testes sem banco**, o teste de integração real e a execução da API compilada com as 12 operações Swagger. Os bancos de `api5` permaneceram sem registros de teste.
+
+As [evidências da revisão didática](evidencias/2026-10-02-revisao-didatica.json) são separadas da execução completa em `api5`. Essa conferência não repetiu instalações e migrações já aprovadas, porque os modelos, as versões e a lógica não foram alterados.
+
+Os 13 documentos foram renderizados em uma prévia local no Edge para conferir os títulos em português e os caminhos visíveis. Essa prévia não substitui uma conferência na página publicada do GitHub.
+
+<details>
+<summary>Prévia local do exemplo de configuração com identificação do arquivo</summary>
+
+![Exemplo prisma.config.ts com propósito, caminho visível e comentário no cabeçalho](evidencias/revisao-didatica-configuracao.png)
+
+</details>
 
 ## Resultado por capítulo
 

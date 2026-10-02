@@ -1,22 +1,38 @@
+<!-- Documento: docs/08-documentacao-com-swagger.md -->
+
 # 08 · Documentação interativa com Swagger
 
 [← Anterior](07-seguranca-e-rate-limit.md) · [Índice](../README.md) · **Etapa 8 de 11** · [Próxima →](09-testes-automatizados-vitest.md)
+
+**Ponto de partida:** conclua o capítulo anterior antes de continuar. Todos os caminhos abaixo partem da raiz da sua API, a pasta que contém `package.json`. Crie as subpastas indicadas no editor quando ainda não existirem.
 
 ## Resultado desta etapa
 
 OpenAPI com cadastro, login, logout e todas as operações de usuários; Swagger disponível no código TypeScript e no JavaScript compilado.
 
+**OpenAPI** é o formato que descreve os endereços, campos e respostas da API. **Swagger UI** é a página que mostra essa descrição e permite testar os pedidos. Primeiro vamos produzir a descrição; depois vamos disponibilizar a página em `/api-docs`.
+
 ## 1. Instalar pacotes fixados
 
+**Propósito do passo:** Swagger oferece uma página para ler as operações e enviar pedidos. Instalamos a ferramenta que lê os comentários das rotas e a que exibe essa página.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm install --save-exact swagger-jsdoc@6.3.0 swagger-ui-express@5.0.1
 npm install -D --save-exact @types/swagger-jsdoc@6.0.4 @types/swagger-ui-express@4.1.8
 ```
 
 ## 2. Criar a configuração
 
+**Propósito do passo:** A configuração define o título, o endereço da API e a forma de autenticar. Ela também indica onde procurar os comentários que descrevem cada rota.
+
+**Arquivo: `src/config/swagger.ts`**
+
+Crie este arquivo e copie todo o conteúdo abaixo. Lê os comentários das rotas e monta o documento OpenAPI e a página Swagger.
+
 <!-- file: src/config/swagger.ts -->
 ```typescript
+// Arquivo: src/config/swagger.ts
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import type { Express } from 'express';
@@ -52,10 +68,17 @@ A busca usa o diretório do módulo, não o diretório de trabalho do terminal. 
 
 ## 3. Substituir o arquivo de rotas de usuários com a documentação
 
-O código dos handlers é preservado. O comentário abaixo descreve todas as operações e suas regras.
+**Propósito do passo:** Vamos descrever os campos e as respostas das operações de usuários. Esses comentários são lidos pela ferramenta de documentação, sem substituir o código que atende os pedidos.
+
+O código das funções que atendem as rotas é preservado. O comentário `@openapi` descreve todas as operações e suas regras. Copie também esse comentário: a página Swagger precisa dele para mostrar campos e respostas.
+
+**Arquivo: `src/routes/user.route.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Relaciona os endereços de usuários aos controladores. Ao longo do guia também recebe validação, autenticação e comentários para o Swagger.
 
 <!-- file: src/routes/user.route.ts -->
 ```typescript
+// Arquivo: src/routes/user.route.ts
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
@@ -189,8 +212,15 @@ export default router;
 
 ## 4. Substituir as rotas de autenticação com a documentação
 
+**Propósito do passo:** Cadastro e login não devem exigir um token anterior. Vamos documentar corretamente essas exceções para que uma pessoa consiga começar a usar a API pela página Swagger.
+
+**Arquivo: `src/routes/auth.route.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Disponibiliza os endereços de login e logout e conecta a validação de entrada ao controlador.
+
 <!-- file: src/routes/auth.route.ts -->
 ```typescript
+// Arquivo: src/routes/auth.route.ts
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
@@ -244,10 +274,17 @@ export default router;
 
 ## 5. Substituir `src/app.ts` completo
 
-Swagger entra antes do handler 404 e do middleware de erros. Todos os middlewares anteriores continuam presentes.
+**Propósito do passo:** Precisamos registrar a página e o documento JSON na aplicação antes da resposta de rota ausente. Isso torna a documentação acessível pelo navegador.
+
+Swagger é registrado antes da função que responde 404 e do tratamento de erros. Assim, a aplicação encontra as rotas de documentação antes de concluir que o endereço não existe. Todas as validações e proteções anteriores continuam presentes.
+
+**Arquivo: `src/app.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Configura o Express e os caminhos pelos quais os pedidos serão atendidos. Este arquivo será atualizado ao conectar novos recursos do guia.
 
 <!-- file: src/app.ts -->
 ```typescript
+// Arquivo: src/app.ts
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -282,7 +319,10 @@ app.use(errorHandler);
 
 ## 6. Testar em desenvolvimento e após o build
 
+**Propósito do passo:** Vamos testar a documentação no modo de desenvolvimento e na versão compilada. Também vamos enviar um pedido pela interface, para verificar que ela aponta para a API correta.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run typecheck
 npm run dev
 ```
@@ -290,27 +330,33 @@ npm run dev
 Abra [http://localhost:3000/api-docs](http://localhost:3000/api-docs). Em outro CMD:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 curl.exe -i http://localhost:3000/api-docs.json
 ```
 
 Confira os quatro caminhos `/users`, `/users/{id}`, `/login` e `/logout`. Para usar a interface:
 
-1. Cadastre uma conta em `POST /users`.
-2. Faça login em `POST /login`, sem token prévio.
-3. No botão **Authorize**, cole apenas o token, sem escrever `Bearer`.
-4. Consulte a própria conta e use seu ID nas operações seguintes.
-5. Confira que consultar outra conta devolve 403.
+1. Clique na linha verde **POST /users** para abrir o cadastro. Clique em **Try it out** (testar), preencha o corpo JSON com um e-mail ainda não usado, uma senha como `Teste123!` e, opcionalmente, um nome. Clique em **Execute** (executar).
+2. Confira a seção **Server response** (resposta do servidor): espere **201**. Anote o `id` retornado; ele identifica essa conta nas consultas e alterações seguintes.
+3. Abra **POST /login**, clique em **Try it out**, informe o mesmo e-mail e senha e clique em **Execute**. Login não exige token prévio. Espere **200** e copie somente o valor de `token`, sem as aspas.
+4. No botão **Authorize** (autorizar), cole somente esse token no campo de Bearer, sem escrever `Bearer`. Clique em **Authorize** dentro da janela e depois em **Close** (fechar). A ferramenta passa a acrescentar o cabeçalho de autenticação.
+5. Abra **GET /users**, clique em **Try it out** e em **Execute**. Espere 200 e uma lista com apenas a própria conta.
+6. Em **GET /users/{id}**, clique em **Try it out**, preencha o campo `id` com o número anotado e execute. Ao usar um ID diferente do da sua conta, espere 403. Use o ID correto nas operações de atualização e exclusão.
+
+Os nomes dos botões acima são os exibidos pela ferramenta instalada; a tradução entre parênteses explica sua função. Se o token expirar, faça login novamente e repita a autorização. Se um campo ainda estiver preenchido com valores de exemplo, substitua-os pelos valores da sua conta antes de executar.
 
 Pare o servidor de desenvolvimento com Ctrl+C:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run build
 npm start
 ```
 
 Confira novamente `/api-docs` e `/api-docs.json`; a documentação deve continuar presente no JavaScript compilado.
 
-> [!NOTE]
+> **ℹ️ Observação**
+>
 > Este exercício expõe Swagger localmente. Antes de publicar uma API, decida se a interface e o documento OpenAPI serão públicos ou exigirão acesso. Configure `API_ORIGIN` para a URL externa real. HTTPS em produção também é necessário para os cookies `Secure`.
 
 ## Conferência antes de avançar

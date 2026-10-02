@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-02T14:37:59.452Z",
+  "status": "PASS",
+  "scope": "Revisão didática da documentação validada em api5; comparação da lógica e execução isolada dos exemplos com novos cabeçalhos.",
+  "fileExamples": 56,
+  "distinctFiles": 40,
+  "stepsWithPurpose": 64,
+  "unitTests": 23,
+  "integrationTests": 1,
+  "history": [
+    {
+      "name": "56 exemplos de arquivo identificados; 64 passos com propósito; 40 arquivos e scripts sem alteração de lógica",
+      "status": "PASS"
+    },
+    {
+      "name": "UTF-8, caminhos visíveis, avisos em português, JSON estrito de scripts e links conferidos",
+      "status": "PASS"
+    },
+    {
+      "name": "npm run contract:emit",
+      "status": "PASS"
+    },
+    {
+      "name": "Contrato emitido idêntico ao contrato aprovado em api5",
+      "status": "PASS"
+    },
+    {
+      "name": "npm run generate -- recurso cliente",
+      "status": "PASS"
+    },
+    {
+      "name": "Plop gera quatro arquivos com caminhos corretos no cabeçalho e lógica preservada",
+      "status": "PASS"
+    },
+    {
+      "name": "npm run typecheck",
+      "status": "PASS"
+    },
+    {
+      "name": "npm test",
+      "status": "PASS"
+    },
+    {
+      "name": "npm run build",
+      "status": "PASS"
+    },
+    {
+      "name": "npm run test:integration",
+      "status": "PASS"
+    },
+    {
+      "name": "API compilada responde; Swagger mantém 12 operações e autenticação sem token retorna 401",
+      "status": "PASS"
+    },
+    {
+      "name": "Bancos de api5 permanecem sem registros de teste",
+      "status": "PASS"
+    }
+  ],
+  "markdownPreview": {
+    "renderer": "markdown-it@15.0.2",
+    "browser": "Microsoft Edge",
+    "scope": "Prévia local para conferir caminhos visíveis, títulos em português e estrutura dos blocos; não substitui renderização publicada no GitHub.",
+    "files": [
+      {
+        "file": "README.md",
+        "status": "PASS",
+        "fileCaptions": 0,
+        "steps": 0
+      },
+      {
+        "file": "docs/01-prepacao-do-ambiente.md",
+        "status": "PASS",
+        "fileCaptions": 6,
+        "steps": 8
+      },
+      {
+        "file": "docs/02-modelagem-e-sincronizacao-com-prisma.md",
+        "status": "PASS",
+        "fileCaptions": 3,
+        "steps": 7
+      },
+      {
+        "file": "docs/03-criando-rotas-serv-contro.md",
+        "status": "PASS",
+        "fileCaptions": 8,
+        "steps": 5
+      },
+      {
+        "file": "docs/04-validacao-de-dados-com-zod.md",
+        "status": "PASS",
+        "fileCaptions": 3,
+        "steps": 4
+      },
+      {
+        "file": "docs/05-autenticacao-com-jwt.md",
+        "status": "PASS",
+        "fileCaptions": 10,
+        "steps": 7
+      },
+      {
+        "file": "docs/06-monitorizacao-e-logs-com-winston.md",
+        "status": "PASS",
+        "fileCaptions": 5,
+        "steps": 5
+      },
+      {
+        "file": "docs/07-seguranca-e-rate-limit.md",
+        "status": "PASS",
+        "fileCaptions": 3,
+        "steps": 4
+      },
+      {
+        "file": "docs/08-documentacao-com-swagger.md",
+        "status": "PASS",
+        "fileCaptions": 4,
+        "steps": 6
+      },
+      {
+        "file": "docs/09-testes-automatizados-vitest.md",
+        "status": "PASS",
+        "fileCaptions": 6,
+        "steps": 6
+      },
+      {
+        "file": "docs/10-automacao-e-geracao-de-codigo.md",
+        "status": "PASS",
+        "fileCaptions": 8,
+        "steps": 7
+      },
+      {
+        "file": "docs/11-validacao-ponta-a-ponta.md",
+        "status": "PASS",
+        "fileCaptions": 0,
+        "steps": 5
+      },
+      {
+        "file": "docs/RELATORIO-DE-VALIDACAO.md",
+        "status": "PASS",
+        "fileCaptions": 0,
+        "steps": 0
+      }
+    ]
+  }
+}

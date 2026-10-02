@@ -1,3 +1,5 @@
+<!-- Documento: README.md -->
+
 # 🚀 API com Express, TypeScript e Prisma 8
 
 **Um guia progressivo para construir, testar e documentar uma API PostgreSQL.**
@@ -7,10 +9,13 @@
 ![Prisma 8 RC](https://img.shields.io/badge/Prisma-8%20RC-2D3748?logo=prisma&logoColor=white)
 ![Documentação em português](https://img.shields.io/badge/Documenta%C3%A7%C3%A3o-pt--BR-blue)
 
-> [!IMPORTANT]
+> **📌 Importante**
+>
 > Este README orienta a **reconstrução em uma pasta nova**. A aplicação existente em `src/`, suas migrações e seu `package.json` não são automaticamente convertidos pelos exemplos. Siga os capítulos para construir a API do guia; não execute `orm init` sobre o projeto existente.
 
 ## 🧭 Comece aqui
+
+Uma **API** é um programa que recebe pedidos e devolve respostas. Neste guia, ela recebe pedidos para cadastrar e consultar usuários, conversar com o banco e fazer login. Você vai montar esse programa em partes; não precisa conhecer Prisma, JWT ou Swagger antes de começar.
 
 1. Confira Node.js 24.15.0 ou posterior compatível e npm 11.
 2. Prepare um banco PostgreSQL 15 ou superior **vazio**, local ou Neon, exclusivo para desenvolvimento.
@@ -21,6 +26,40 @@
 Se `api` já existe, use outro diretório pai ou outra pasta vazia. No PowerShell, comandos npm podem precisar de `npm.cmd`/`npx.cmd`, sem alterar a política de execução.
 
 O [`.env.example`](.env.example) contém o mesmo modelo público do capítulo 1. Copie os valores necessários para o `.env` da **nova API**, preenchendo a conexão e gerando uma chave JWT própria. Se pretende aproveitar tabelas e um contrato existentes, leia a alternativa de adoção no [capítulo 2](docs/02-modelagem-e-sincronizacao-com-prisma.md); os campos do banco precisam corresponder aos serviços e ao gerador.
+
+## 📝 Como acompanhar os exemplos
+
+| Quando o guia mostrar… | O que você deve fazer |
+|---|---|
+| **Arquivo: `src/config/env.ts`** | Dentro da pasta da API, abra `src`, depois `config`, e crie ou abra `env.ts` no editor |
+| **Crie este arquivo** | Crie também as pastas do caminho que ainda não existirem e copie o bloco completo |
+| **Substitua todo o conteúdo** | Apague o conteúdo do arquivo indicado e cole o novo bloco; não acrescente uma segunda versão ao final |
+| **Somente o campo `scripts`** | Edite essa parte de `package.json` e preserve o restante do arquivo |
+| Um bloco de comandos CMD | Digite uma linha por vez no terminal, na pasta indicada; não cole comandos dentro de um arquivo TypeScript |
+| Um resultado esperado | Confira a saída no terminal ou navegador antes de seguir para o próximo passo |
+
+A **raiz da API** é a pasta que contém `package.json`: normalmente `api`, ou `api2`, `api3` etc. se você escolheu outro nome. Por exemplo, `prisma.config.ts` fica em `api/prisma.config.ts`; `src/prisma/db.ts` fica em `api/src/prisma/db.ts`.
+
+O comentário `// Arquivo: …` identifica o exemplo e pode ser copiado junto. Arquivos de ambiente usam `#` como comentário. Os arquivos `tsconfig` aceitam JSON com comentários, destacado como `jsonc`. Já `package.json` não aceita comentários: por isso, seu caminho aparece **fora** do bloco JSON. A primeira linha do contrato Prisma continua sendo `// use prisma-8`; o caminho vem na linha seguinte.
+
+Os cabeçalhos identificam os arquivos que você vai escrever a partir dos exemplos. Arquivos gerados automaticamente, como `contract.json`, `contract.d.ts` e `package-lock.json`, devem manter o formato produzido pelas ferramentas; não acrescente comentários manualmente a eles.
+
+### Termos que aparecerão durante a construção
+
+| Termo | Significado neste guia |
+|---|---|
+| Terminal / CMD | Janela onde você digita comandos e lê seus resultados |
+| Dependência / pacote | Biblioteca instalada pelo npm para a aplicação ou as ferramentas usarem |
+| TypeScript | Código com informações de tipos que ajudam a encontrar erros antes da execução |
+| JSON | Formato de dados com campos e valores; usado em configurações e respostas da API |
+| HTTP / rota | Forma de enviar pedidos e endereço que a API atende, como `GET /users` |
+| CLI | Ferramenta usada no terminal; neste caso, os comandos do Prisma |
+| ORM / Prisma | Ferramenta que permite consultar o banco a partir do código da aplicação |
+| Contrato / migração | Descrição da estrutura desejada / mudanças aplicadas ao banco para chegar a essa estrutura |
+| Middleware | Função executada antes ou depois do atendimento de uma rota, como validação ou tratamento de erros |
+| Build / compilar | Converter os arquivos TypeScript de `src` em JavaScript na pasta `dist` |
+
+Cada capítulo apresenta os termos específicos quando eles passam a ser necessários. Os números HTTP, como 200, 400 e 401, indicam o resultado de um pedido e são explicados junto dos testes.
 
 ## 📚 Trilha completa
 
@@ -103,8 +142,9 @@ api/
 | Dependências | Versões exatas nos comandos; `package-lock.json` versionado |
 | Ambiente | Segredo JWT obrigatório; origens HTTP(S) explícitas |
 
-> [!NOTE]
-> Prisma 8 está em versão candidata nesta combinação. Evite trocar pacotes por `latest` durante o exercício. CLI e ORM possuem numeração própria; confira compatibilidade pelo toolchain, não apenas pelo sufixo da versão.
+> **ℹ️ Observação**
+>
+> Prisma 8 está em versão candidata nesta combinação. Evite trocar pacotes por `latest` durante o exercício. CLI e ORM possuem numeração própria; use o conjunto de versões conferido neste guia, sem tentar igualar apenas os números finais de cada pacote.
 
 ## 🔐 Política de acesso
 
@@ -140,14 +180,17 @@ Após o capítulo 8, a interface fica em [http://localhost:3000/api-docs](http:/
 
 ## ✅ Validação e seus limites
 
-**Os onze capítulos foram executados em sequência em uma pasta nova (`api5`), com PostgreSQL real e bancos separados para desenvolvimento e integração, em 2 de outubro de 2026.** Passaram os 23 testes sem banco, o teste de integração, os CRUDs reais, o build, a execução sem dependências de desenvolvimento e a interação com Swagger e cookies no Edge. Os 40 arquivos finais identificados no Markdown correspondem aos arquivos executados.
+**Os onze capítulos foram executados em sequência em uma pasta nova (`api5`), com PostgreSQL real e bancos separados para desenvolvimento e integração, em 2 de outubro de 2026.** Passaram os 23 testes sem banco, o teste de integração, os CRUDs reais, o build, a execução sem dependências de desenvolvimento e a interação com Swagger e cookies no Edge. Naquela execução, os 40 arquivos finais identificados no Markdown foram comparados com os arquivos executados.
+
+A revisão didática seguinte acrescentou identificação dos arquivos, avisos em português e explicações de cada passo. A lógica dos 40 arquivos foi comparada com a versão aprovada, e os exemplos com os novos cabeçalhos foram emitidos, gerados, compilados e testados novamente em uma cópia isolada. Veja as [evidências da revisão didática](docs/evidencias/2026-10-02-revisao-didatica.json).
 
 Consulte o [registro da validação e suas evidências](docs/RELATORIO-DE-VALIDACAO.md). A aprovação se refere às versões e ao ambiente registrados; repita o [capítulo 11](docs/11-validacao-ponta-a-ponta.md) na sua própria instalação. Renderização no GitHub e publicação HTTPS não fizeram parte da execução local.
 
 <details>
 <summary>🛠️ Como ler e copiar os exemplos</summary>
 
-- Blocos com nome de arquivo são completos, salvo quando explicitamente indicados como pares a acrescentar ao objeto `scripts`.
+- O nome do arquivo aparece acima do bloco e, quando o formato permite, no comentário inicial do código.
+- Blocos de arquivo são completos, salvo quando explicitamente indicados como trechos do campo `scripts` ou modelos de ambiente a preencher.
 - Blocos `bat` são comandos CMD executados linha por linha, sem numeração embutida.
 - Listas de conferência são critérios de aprovação, não comprovantes de execução.
 - Alertas destacam dependências e operações de banco; se uma verificação falhar, use o diagnóstico antes de avançar.
@@ -175,4 +218,4 @@ Confira o banco e aplique migrações revisadas conforme o capítulo 11 antes de
 
 [Prisma ORM](https://www.prisma.io/docs/orm/core-concepts) · [Express](https://expressjs.com/) · [TypeScript](https://www.typescriptlang.org/) · [Zod](https://zod.dev/) · [Vitest](https://vitest.dev/) · [Plop](https://plopjs.com/documentation/)
 
-A apresentação usa recursos renderizados pelo GitHub: títulos e sumário, tabelas, blocos com realce de sintaxe, alertas, listas de tarefas, diagramas Mermaid, imagens de badges e seções recolhíveis. Não depende de JavaScript ou CSS personalizado.
+A apresentação usa recursos renderizados pelo GitHub: títulos e sumário, tabelas, blocos com realce de sintaxe, avisos em português, listas de tarefas, diagramas Mermaid, imagens de badges e seções recolhíveis. Os avisos usam citações e títulos em negrito para exibir **Atenção**, **Importante**, **Observação** e **Dica** em português. Não depende de JavaScript ou CSS personalizado.

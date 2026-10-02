@@ -1,6 +1,10 @@
+<!-- Documento: docs/04-validacao-de-dados-com-zod.md -->
+
 # 04 · Validação e normalização com Zod
 
 [← Anterior](03-criando-rotas-serv-contro.md) · [Índice](../README.md) · **Etapa 4 de 11** · [Próxima →](05-autenticacao-com-jwt.md)
+
+**Ponto de partida:** conclua o capítulo anterior antes de continuar. Todos os caminhos abaixo partem da raiz da sua API, a pasta que contém `package.json`. Crie as subpastas indicadas no editor quando ainda não existirem.
 
 ## Resultado desta etapa
 
@@ -8,8 +12,15 @@ Entradas verificadas antes do serviço: e-mail normalizado, senha com limite com
 
 ## 1. Criar schemas de usuário
 
+**Propósito do passo:** Um schema do Zod descreve o formato de entrada aceito pela API. Ele é diferente do contrato do Prisma: um confere os pedidos HTTP, e o outro descreve o banco.
+
+**Arquivo: `src/schemas/user.schema.ts`**
+
+Crie este arquivo e copie todo o conteúdo abaixo. Define quais campos o cadastro e a atualização aceitam e quais formatos de ID são válidos.
+
 <!-- file: src/schemas/user.schema.ts -->
 ```typescript
+// Arquivo: src/schemas/user.schema.ts
 import { z } from 'zod';
 
 export const idParams = z.object({
@@ -42,10 +53,19 @@ export const userIdSchema = z.object({ params: idParams });
 
 `.strict()` rejeita campos desconhecidos como `id`, `createdAt` e `role`. O limite da senha usa **bytes**, porque bcrypt considera até 72 bytes; não corte senhas silenciosamente. Atualizações vazias recebem 400.
 
+O schema define campos permitidos e suas regras. A normalização remove espaços das extremidades do e-mail e o converte para minúsculas antes de conferir seu formato. Um caractere com acento pode ocupar mais de um byte em UTF-8; por isso, contar apenas os caracteres da senha não é suficiente para respeitar o limite do bcrypt.
+
 ## 2. Criar middleware que utiliza o resultado validado
+
+**Propósito do passo:** Um middleware é uma função executada no caminho entre a chegada do pedido e o controlador. Aqui ele interrompe entradas inválidas e entrega ao controlador os valores já corrigidos, como o e-mail sem espaços.
+
+**Arquivo: `src/middlewares/validate.middleware.ts`**
+
+Crie este arquivo e copie todo o conteúdo abaixo. Executa o schema de validação antes do controlador e troca o corpo do pedido pelo resultado normalizado.
 
 <!-- file: src/middlewares/validate.middleware.ts -->
 ```typescript
+// Arquivo: src/middlewares/validate.middleware.ts
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 
@@ -64,13 +84,21 @@ export const validate = (schema: z.ZodType): RequestHandler => async (req, res, 
 };
 ```
 
-> [!IMPORTANT]
-> O Zod devolve um novo resultado. Validar e descartar esse resultado mantém a entrada original. Aqui `req.body` é substituído pelo valor normalizado. Os IDs permanecem strings validadas em `req.params`; o controlador os converte. Não atribua a `req.query`, que é um getter no Express 5.
+> **📌 Importante**
+>
+> O Zod devolve um novo resultado. Validar e descartar esse resultado mantém a entrada original. Aqui `req.body` é substituído pelo valor normalizado. Os IDs permanecem strings validadas em `req.params`; o controlador os converte. `req.query`, que representa os parâmetros após `?` na URL, é uma propriedade de leitura no Express 5; não tente substituí-la como fazemos com `req.body`.
 
 ## 3. Substituir as rotas
 
+**Propósito do passo:** Criar a validação não a ativa automaticamente. Vamos incluí-la nas rotas para que ela seja executada antes dos controladores nas operações que recebem dados.
+
+**Arquivo: `src/routes/user.route.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Relaciona os endereços de usuários aos controladores. Ao longo do guia também recebe validação, autenticação e comentários para o Swagger.
+
 <!-- file: src/routes/user.route.ts -->
 ```typescript
+// Arquivo: src/routes/user.route.ts
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller.js';
 import { validate } from '../middlewares/validate.middleware.js';
@@ -89,13 +117,19 @@ O controlador completo do capítulo 3 pode ser mantido. Sua verificação básic
 
 ## 4. Conferir rejeição e normalização
 
+**Propósito do passo:** Vamos enviar dados incorretos de propósito e depois um e-mail que precisa de normalização. A comparação das respostas mostra se a validação rejeita erros e se o valor corrigido chega ao banco.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run typecheck
 ```
 
 Com a API aberta, em outro CMD:
 
+Se parou o servidor para editar os arquivos, execute `npm run dev` no primeiro terminal e espere a mensagem de inicialização. Os comandos abaixo vão no segundo terminal, na raiz da mesma API.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"email-invalido\",\"password\":\"123\"}" http://localhost:3000/users
 curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"valido@example.com\",\"password\":\"Teste123!\",\"id\":99}" http://localhost:3000/users
 curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\" NORMALIZADO@EXAMPLE.COM \",\"password\":\"Teste123!\"}" http://localhost:3000/users

@@ -1,3 +1,5 @@
+<!-- Documento: docs/11-validacao-ponta-a-ponta.md -->
+
 # 11 · Validação final e operação
 
 [← Anterior](10-automacao-e-geracao-de-codigo.md) · [Índice](../README.md) · **Etapa 11 de 11**
@@ -8,9 +10,14 @@ Registrar evidências de que a aplicação construída pelo guia funciona no seu
 
 ## 1. Verificações automáticas
 
+**Propósito do passo:** Vamos reunir as verificações do contrato, dos tipos, dos testes, da compilação e do banco. Cada comando confirma uma parte diferente da aplicação; por isso, todos precisam concluir sem erro.
+
 Pare servidores duplicados e execute na raiz da API construída:
 
+Volte aos terminais que executam o servidor e pressione Ctrl+C. Os comandos abaixo devem ser executados um de cada vez em um CMD aberto na pasta da API. Não avance para o seguinte se o anterior terminar com erro; use a mensagem e o diagnóstico ao final deste capítulo para localizar a causa.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run contract:emit
 npm run typecheck
 npm test
@@ -31,9 +38,12 @@ npx prisma migration status
 
 ## 2. Integração real em banco de testes
 
+**Propósito do passo:** O banco de testes também precisa receber a migração de Cliente. Depois vamos repetir o teste real de usuários para confirmar que a nova estrutura preservou o fluxo anterior.
+
 Confira `.env.test`, inclusive `DIRECT_URL` quando usada. Aplique as migrações, agora também com `Cliente`:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 node --env-file=.env.test ./node_modules/prisma/dist/prisma.js db migrate
 node --env-file=.env.test ./node_modules/prisma/dist/prisma.js db verify
 npm run test:integration
@@ -43,18 +53,24 @@ Espere o fluxo de usuários aprovado, sem registros de teste remanescentes. O CR
 
 ## 3. Testar a saída compilada
 
+**Propósito do passo:** A versão compilada é a que será executada fora do modo de desenvolvimento. Vamos iniciar essa versão e repetir operações com dados descartáveis.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm start
 ```
 
 Em outro CMD:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 curl.exe -i http://localhost:3000/health
 curl.exe -i http://localhost:3000/api-docs.json
 ```
 
 Abra o Swagger, crie uma conta descartável e execute a sequência abaixo. Evite outras tentativas inválidas de login durante o teste dos limites; elas contam na mesma janela por IP.
+
+Use [http://localhost:3000/api-docs](http://localhost:3000/api-docs) e a sequência de **Try it out**, **Execute** e **Authorize** explicada no capítulo 8. Anote os IDs das contas e dos clientes criados. Para testar “outra conta”, cadastre uma segunda conta descartável; continue usando o token da primeira ao consultar o ID da segunda.
 
 | Cenário | Resultado |
 |---|---|
@@ -86,6 +102,8 @@ Para cookie em escrita no curl, envie `Origin` com `FRONTEND_ORIGIN` ou `API_ORI
 
 ## 4. Conferir logs e arquivos versionados
 
+**Propósito do passo:** Vamos conferir o que será compartilhado e o que deve permanecer local. Isso evita perder arquivos necessários para reconstruir a API e evita incluir segredos ou arquivos gerados no Git.
+
 - [ ] Logs HTTP presentes em `logs/all.log`.
 - [ ] Logs sem senhas, tokens e cookies.
 - [ ] `.env`, `.env.test`, `cookies.txt`, `node_modules`, `dist`, `logs` e `coverage` fora do Git.
@@ -96,14 +114,20 @@ Para cookie em escrita no curl, envie `Origin` com `FRONTEND_ORIGIN` ou `API_ORI
 
 Se criou o arquivo de cookies do capítulo 5, acrescente `cookies.txt` ao `.gitignore` ou exclua o arquivo local. No repositório da API, se Git estiver inicializado, confira:
 
+**Versionar** significa guardar os arquivos no histórico do Git para reconstruir o projeto depois. `git status --short` lista alterações; `git check-ignore` mostra quais caminhos são ignorados. Se você ainda não usa Git, não execute esses comandos agora: confira `.gitignore` no editor e guarde os arquivos de fonte, contratos e migrações listados acima para a etapa de versionamento.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 git status --short
 git check-ignore .env .env.test node_modules dist logs coverage
 ```
 
 ## 5. Preparar produção com os limites do exercício em mente
 
-> [!IMPORTANT]
+**Propósito do passo:** Publicar significa executar a API em um ambiente acessível aos usuários. Vamos entender a ordem de instalação, compilação e migração, além das configurações que dependem do provedor escolhido.
+
+> **📌 Importante**
+>
 > O tutorial valida uma API local. Publicação envolve decisões de infraestrutura que dependem do seu provedor: domínio, TLS, proxy, segredos, banco, retenção de logs e armazenamento dos limites. Não trate a aprovação local como certificação de produção.
 
 | Item | Configuração necessária |
@@ -114,7 +138,7 @@ git check-ignore .env .env.test node_modules dist logs coverage
 | Banco | URL correta, TLS do provedor, migrações revisadas antes de aplicar |
 | Deploy | Artefatos de build, contrato JSON e dependências de execução |
 | Proxy | `trust proxy` restrito à infraestrutura real, quando necessário |
-| Escala | Store compartilhado para limites em múltiplas instâncias |
+| Escala | Armazenamento compartilhado dos contadores de limite quando houver vários processos da API |
 | Logs | Coleta e retenção apropriadas; não divulgar informações sensíveis |
 | Swagger | Decidir se deve ser público, restrito ou desativado |
 | Sessões | Revogação imediata exige mecanismo adicional; JWT dura 15 minutos |
@@ -125,6 +149,7 @@ Faça o build em uma etapa que tenha as dependências de desenvolvimento instala
 Fluxo de referência para uma cópia limpa da **API já construída e versionada**:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm ci
 npm run typecheck
 npm test

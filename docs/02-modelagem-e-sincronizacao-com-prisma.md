@@ -1,6 +1,10 @@
+<!-- Documento: docs/02-modelagem-e-sincronizacao-com-prisma.md -->
+
 # 02 · Contrato, banco e migrações
 
 [← Anterior](01-prepacao-do-ambiente.md) · [Índice](../README.md) · **Etapa 2 de 11** · [Próxima →](03-criando-rotas-serv-contro.md)
+
+**Ponto de partida:** conclua o capítulo anterior antes de continuar. Todos os caminhos abaixo partem da raiz da sua API, a pasta que contém `package.json`. Crie as subpastas indicadas no editor quando ainda não existirem.
 
 ## Resultado desta etapa
 
@@ -15,16 +19,24 @@ flowchart LR
     D -->|db verify| F[Conferência do contrato]
 ```
 
-> [!IMPORTANT]
+> **📌 Importante**
+>
 > Use o banco de desenvolvimento **vazio** configurado na etapa 1. `migration plan` não acessa o banco, mas `db migrate` altera sua estrutura. Não aplique este fluxo sobre tabelas existentes sem seguir a seção de adoção ao final.
 
 ## 1. Substituir o contrato inicial
 
+**Propósito do passo:** O contrato descreve os campos de cada registro e as regras do banco. Vamos começar apenas com User, para aprender o ciclo completo antes de acrescentar outra tabela.
+
 **Substitua todo o arquivo** `src/prisma/contract.prisma`, removendo os exemplos `User` e `Post` gerados pela CLI. Não acrescente outro modelo `User` ao que já existe.
+
+**Arquivo: `src/prisma/contract.prisma`**
+
+Substitua todo o conteúdo do arquivo existente. Descreve os modelos do banco. Preserve a primeira linha // use prisma-8: ela permite que o Prisma reconheça este contrato.
 
 <!-- file: src/prisma/contract.prisma -->
 ```prisma
 // use prisma-8
+// Arquivo: src/prisma/contract.prisma
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -37,10 +49,28 @@ model User {
 
 Mantenha `// use prisma-8` como primeira linha. O contrato declara estrutura; não contém dados nem credenciais. `password` armazenará um hash bcrypt, nunca a senha enviada pelo usuário.
 
+| Declaração | O que significa |
+|---|---|
+| `model User` | Define o tipo de registro de usuário que será armazenado |
+| `id Int @id @default(autoincrement())` | Identificador inteiro, chave primária, com valor criado pelo banco |
+| `email String @unique` | E-mail obrigatório que não pode se repetir em outro usuário |
+| `name String?` | Nome opcional; `?` permite ausência de valor |
+| `password String` | Campo obrigatório para guardar o hash da senha |
+| `createdAt DateTime @default(now())` | Data e hora preenchidas pelo banco no cadastro |
+
+Um **hash** é o resultado de transformar a senha com bcrypt. No login, a aplicação compara a senha recebida com esse resultado; não precisa guardar a senha original. Essa transformação será implementada no capítulo 3.
+
 ## 2. Substituir a configuração da CLI
+
+**Propósito do passo:** Este arquivo informa à ferramenta de terminal do Prisma qual contrato ler e a qual banco se conectar. Ele fica na raiz da API, ao lado de package.json, e não dentro da pasta src.
+
+**Arquivo: `prisma.config.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Configura os comandos do Prisma executados no terminal. É um arquivo da raiz da API, no mesmo nível de package.json.
 
 <!-- file: prisma.config.ts -->
 ```typescript
+// Arquivo: prisma.config.ts
 import 'dotenv/config';
 import { definePrismaConfig } from 'prisma/config';
 import { defineConfig as ormConfig } from '@prisma/orm-postgres/config';
@@ -59,9 +89,16 @@ export default definePrismaConfig({
 
 `DIRECT_URL` é opcional e atende à CLI. A aplicação usa `DATABASE_URL`. O import de `prisma/config` funciona com a CLI fixada; `@prisma/cli-engine` também é usado pela configuração gerada originalmente.
 
+Neste arquivo, `import 'dotenv/config'` carrega `.env` para `process.env`, que é o conjunto de variáveis de ambiente disponíveis ao programa. `connection` escolhe `DIRECT_URL` quando preenchida e usa `DATABASE_URL` caso contrário. A verificação seguinte mostra uma mensagem clara se nenhuma conexão foi informada.
+
+`definePrismaConfig` monta a configuração da CLI; `ormConfig` configura a parte PostgreSQL. O campo `contract` indica o caminho relativo do contrato, e `db.connection` indica a conexão da CLI. `skills.agents` escolhe onde gravar as instruções auxiliares dos agentes; ele não muda o banco nem as rotas da API.
+
 ## 3. Emitir o contrato e sincronizar skills
 
+**Propósito do passo:** Emitir significa transformar o contrato em arquivos que a aplicação consegue ler e que o TypeScript consegue conferir. Sincronizar skills atualiza instruções auxiliares para agentes de programação; são duas tarefas diferentes, e nenhuma delas cria tabelas.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run contract:emit
 npm run skills:sync
 ```
@@ -80,8 +117,15 @@ Skills são instruções para agentes de programação. Não criam tabelas, não
 
 ## 4. Substituir o cliente gerado
 
+**Propósito do passo:** A aplicação precisa de um cliente para executar consultas. Vamos criar esse cliente em um só lugar, para que os serviços reutilizem a mesma configuração e não abram clientes independentes sem necessidade.
+
+**Arquivo: `src/prisma/db.ts`**
+
+Substitua todo o conteúdo do arquivo existente. Cria o cliente compartilhado usado para consultar o banco. O suporte a Temporal é carregado antes das consultas que leem DateTime.
+
 <!-- file: src/prisma/db.ts -->
 ```typescript
+// Arquivo: src/prisma/db.ts
 import 'temporal-polyfill/full/global';
 import postgres from '@prisma/orm-postgres/runtime';
 import type { Contract } from './contract.js';
@@ -97,20 +141,25 @@ export const db = postgres<Contract>({
 
 Todos os serviços importarão este módulo, compartilhando o cliente no mesmo processo. `tsx watch` reinicia o processo quando necessário; o cliente não precisa de um armazenamento global para sobreviver a processos diferentes. No capítulo 3 adicionaremos o fechamento das conexões ao encerrar o servidor.
 
-> [!IMPORTANT]
+> **📌 Importante**
+>
 > No Prisma 8, `DateTime` retorna `Temporal.Instant`, não `Date`. O Node.js 24 não oferece `Temporal` global: o primeiro import acima instala o suporte antes de qualquer consulta. O pacote foi incluído nas dependências de execução no capítulo 1 e deve permanecer instalado em produção. Sem ele, a migração e `/health` podem passar, mas o primeiro cadastro retorna 500 ao ler `createdAt`. Na resposta JSON, o instante é serializado como uma string de data e hora. Veja a [explicação oficial sobre DateTime e Temporal](https://www.prisma.io/docs/orm/coming-from-prisma-orm-7#schema).
 
 ## 5. Planejar, revisar e aplicar a primeira migração
 
+**Propósito do passo:** Uma migração é um conjunto de mudanças na estrutura do banco. Primeiro geramos e revisamos o plano; somente depois o aplicamos. Essa separação permite perceber uma mudança incorreta antes de executá-la.
+
 Execute **uma linha por vez**, sem acrescentar numeração:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npx prisma migration plan --name init
 ```
 
 Revise a pasta criada em `migrations/app/`. O plano inicial deve criar a tabela de usuários, chave primária e unicidade de e-mail. O contrato ainda não foi aplicado apenas por existir um plano.
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npx prisma db migrate --advance-ref db
 npx prisma db verify
 npx prisma migration status
@@ -118,16 +167,22 @@ npx prisma migration status
 
 **Resultado esperado:** migração aplicada, banco compatível com o contrato e nenhuma migração pendente. O parâmetro `--advance-ref db` atualiza a referência local usada para planejar a próxima mudança.
 
-> [!NOTE]
+> **ℹ️ Observação**
+>
 > Prisma 8 registra assinaturas e histórico no schema PostgreSQL `prisma_contract`, incluindo `marker` e `ledger`. A tabela `_prisma_migrations` pertence ao fluxo das versões anteriores. Os tipos deste tutorial são emitidos em `src/prisma/contract.d.ts` por `contract emit`, não por `db migrate` dentro de `node_modules`.
 
 Versione **toda** a pasta `migrations/`, incluindo snapshots e refs, junto com os três arquivos do contrato. Não edite contratos JSON manualmente.
 
+A pasta de migração contém o plano e os registros da estrutura usada para calculá-lo. Abra os arquivos gerados no editor e confira que a primeira mudança cria apenas o modelo `User` do exercício. `db verify` compara a estrutura real com o contrato, e `migration status` informa se há planos ainda não aplicados. Pare aqui e use o diagnóstico se um deles falhar.
+
 ## 6. Conferir compilação e produção
+
+**Propósito do passo:** Conferir tipos procura erros no código sem gerar arquivos. Compilar transforma TypeScript em JavaScript. Iniciar a versão compilada confirma que os imports e o contrato também funcionam fora do modo de desenvolvimento.
 
 Pare `npm run dev` com Ctrl+C antes de iniciar outro servidor na mesma porta.
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run typecheck
 npm run build
 npm start
@@ -136,6 +191,7 @@ npm start
 Em outro terminal:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 curl.exe -i http://localhost:3000/health
 ```
 
@@ -143,7 +199,10 @@ Espere 200. Confira também `dist/prisma/contract.json`: `tsc` copia o JSON impo
 
 ## 7. Repetir o ciclo ao mudar modelos
 
+**Propósito do passo:** Sempre que um modelo mudar, os tipos e a estrutura do banco precisam acompanhar a mudança. Repetir este ciclo mantém o contrato, a aplicação e o banco descrevendo a mesma estrutura.
+
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npm run contract:emit
 npx prisma migration plan --name descreva_a_mudanca
 ```
@@ -151,6 +210,7 @@ npx prisma migration plan --name descreva_a_mudanca
 Revise o plano antes de continuar:
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npx prisma db migrate --advance-ref db
 npx prisma db verify
 npm run typecheck
@@ -165,6 +225,7 @@ Não planeje duas mudanças sucessivas sem aplicar a anterior ou selecionar expl
 Esta é uma **alternativa**, não uma continuação do exercício. Trabalhe em uma cópia de desenvolvimento e faça backup antes de mudanças estruturais.
 
 ```bat
+REM Execute no CMD, na raiz da sua API (pasta que contém package.json).
 npx prisma contract infer
 npm run contract:emit
 npx prisma db sign
