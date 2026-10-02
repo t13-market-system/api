@@ -69,17 +69,27 @@ Após criar o arquivo, substitua todo o conteúdo dele por esta configuração m
 Agora, vamos preparar a fundação do nosso banco de dados utilizando a nova CLI do Prisma 8 (Prisma Next).
 
 ```bash
-npx prisma orm init --target postgres
+npx prisma@latest orm init --target postgres
 ```
+
+> [!TIP]
+> **Interatividade no Terminal:**
+> Ao rodar o comando acima, a CLI do Prisma 8 poderá fazer algumas perguntas para configurar o ambiente. Se isso acontecer, escolha as seguintes opções:
+> 1. **"Which authoring style would you like to use?"** → Escolha **Prisma Schema Language (PSL)**.
+> 2. **"Where do you want to place your schema file?"** → Se perguntar, escolha ou digite **`prisma/contract.prisma`**.
+> 3. **"Do you want to write a .env file?"** → Escolha **Yes**.
+> 
+> *(Dica ninja: Para rodar sem perguntas e criar tudo magicamente no local certo, use o comando completo: `npx prisma@latest orm init --yes --target postgres --authoring psl --schema-path prisma/contract.prisma`)*
 
 > [!TIP]  
 > **O que acabou de ser gerado?**
-> - **Pasta `prisma/` com `contract.prisma`:** No Prisma 8, este arquivo é o coração do seu banco. É onde "desenhamos" os modelos usando a sintaxe atualizada. *(Nota: Se a CLI criou a pasta dentro de `src/`, você pode movê-la para a raiz para manter o padrão deste tutorial).*
+> - **Pasta `prisma/` com `contract.prisma`:** No Prisma 8, este arquivo é o coração do seu banco.
+> - **Arquivos `contract.d.ts` e `contract.json`:** Gerados automaticamente dentro da pasta `prisma/`, são essenciais para que o TypeScript funcione corretamente com os modelos. Se eles não foram gerados ou deram erro, certifique-se de que os pacotes do passo 3 foram instalados e rode `npx prisma contract emit`.
 > - **Arquivo `prisma.config.ts` na raiz:** Configuração principal do Prisma.
-> - **Arquivo `.env.example` na raiz:** Modelo de variáveis de ambiente.
+> - **Arquivo `.env` na raiz:** Arquivo de variáveis de ambiente.
 
 > [!WARNING]  
-> **Segurança:** Renomeie `.env.example` para `.env`. Este arquivo guarda credenciais sensíveis (como a URL do banco). Ele **NUNCA** deve ser enviado para o GitHub! Certifique-se de que a palavra `.env` está listada no seu `.gitignore`.
+> **Segurança:** O arquivo `.env` (ou `.env.example`) guarda credenciais sensíveis (como a URL do banco). O `.env` **NUNCA** deve ser enviado para o GitHub! Certifique-se de que a palavra `.env` está listada no seu `.gitignore`.
 
 ## 6️⃣ Scripts de Execução
 

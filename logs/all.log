@@ -1,0 +1,68 @@
+2026-10-01 19:40:13:4013 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:43:17:4317 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:54:35:5435 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:54:46:5446 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:54:48:5448 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:54:56:5456 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:03:553 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:25:5525 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:30:5530 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:51:5551 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:53:5553 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:55:58:5558 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:00:560 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:05:565 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:20:5620 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:22:5622 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:26:5626 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:56:51:5651 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:57:01:571 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:57:03:573 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:57:09:579 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:57:12:5712 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 19:57:14:5714 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:13:17:1317 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:13:17:1317 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:13:22:1322 [35mhttp[39m: [35mGET / 404 139 - 4.866 ms[39m
+2026-10-01 20:13:23:1323 [35mhttp[39m: [35mGET / 404 139 - 0.947 ms[39m
+2026-10-01 20:13:27:1327 [35mhttp[39m: [35mGET /api-doc 404 146 - 0.446 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs 301 158 - 1.225 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/ 200 3106 - 1.528 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 200 3095 - 0.147 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/swagger-ui.css 200 186154 - 10.779 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 200 267767 - 18.799 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/swagger-ui-bundle.js 200 1586002 - 20.047 ms[39m
+2026-10-01 20:13:35:1335 [35mhttp[39m: [35mGET /api-docs/favicon-32x32.png 200 628 - 3.209 ms[39m
+2026-10-01 20:19:17:1917 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:19:17:1917 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:19:23:1923 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:19:23:1923 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:19:27:1927 [35mhttp[39m: [35mGET /api-docs/ 304 - - 2.890 ms[39m
+2026-10-01 20:19:27:1927 [35mhttp[39m: [35mGET /api-docs/swagger-ui.css 304 - - 1.482 ms[39m
+2026-10-01 20:19:27:1927 [35mhttp[39m: [35mGET /api-docs/swagger-ui-bundle.js 304 - - 2.583 ms[39m
+2026-10-01 20:19:27:1927 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 304 - - 0.219 ms[39m
+2026-10-01 20:19:27:1927 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 304 - - 4.613 ms[39m
+2026-10-01 20:19:28:1928 [35mhttp[39m: [35mGET /api-docs/favicon-32x32.png 304 - - 0.344 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/ 304 - - 0.637 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/swagger-ui.css 304 - - 0.376 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/swagger-ui-bundle.js 304 - - 0.821 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 304 - - 1.112 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 304 - - 0.163 ms[39m
+2026-10-01 20:19:29:1929 [35mhttp[39m: [35mGET /api-docs/favicon-32x32.png 304 - - 0.406 ms[39m
+2026-10-01 20:19:36:1936 [35mhttp[39m: [35mGET /api-docs/ 304 - - 0.549 ms[39m
+2026-10-01 20:19:36:1936 [35mhttp[39m: [35mGET /api-docs/swagger-ui.css 304 - - 0.370 ms[39m
+2026-10-01 20:19:36:1936 [35mhttp[39m: [35mGET /api-docs/swagger-ui-bundle.js 304 - - 0.384 ms[39m
+2026-10-01 20:19:36:1936 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 304 - - 0.243 ms[39m
+2026-10-01 20:19:36:1936 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 304 - - 1.613 ms[39m
+2026-10-01 20:21:26:2126 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:21:26:2126 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:21:29:2129 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:21:29:2129 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:21:37:2137 [32minfo[39m: [32mServidor rodando na porta 3000[39m
+2026-10-01 20:21:37:2137 [32minfo[39m: [32mDocumentação da API disponível em http://localhost:3000/api-docs[39m
+2026-10-01 20:21:38:2138 [35mhttp[39m: [35mGET /api-docs/ 304 - - 2.546 ms[39m
+2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui.css 304 - - 1.583 ms[39m
+2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui-bundle.js 304 - - 2.722 ms[39m
+2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui-init.js 200 8659 - 0.387 ms[39m
+2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/swagger-ui-standalone-preset.js 304 - - 2.328 ms[39m
+2026-10-01 20:21:39:2139 [35mhttp[39m: [35mGET /api-docs/favicon-32x32.png 304 - - 1.845 ms[39m
