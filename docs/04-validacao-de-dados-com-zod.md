@@ -1,133 +1,116 @@
-# 🛡️ Validação de Dados com Zod e Middlewares
+# 04 · Validação e normalização com Zod
 
-> [!NOTE]  
-> Atualmente, o nosso `UserController` possui validações manuais (como `if (!email || !password)`). Embora funcione, isso polui o Controlador. O ideal é que o Controlador foque apenas em orquestrar o fluxo. Para resolver isso, vamos usar o **Zod** para criar esquemas de validação e um **Middleware** para interceptar as requisições, limpando e validando os dados antes de chegarem ao Controlador.
+[← Anterior](03-criando-rotas-serv-contro.md) · [Índice](../README.md) · **Etapa 4 de 11** · [Próxima →](05-autenticacao-com-jwt.md)
 
-## 1️⃣6️⃣ Criando Esquemas de Validação (Schemas)
+## Resultado desta etapa
 
-Os esquemas definem as regras que os nossos dados devem seguir (ex: "o email deve ser um email válido", "a senha deve ter no mínimo 6 caracteres").
+Entradas verificadas antes do serviço: e-mail normalizado, senha com limite compatível com bcrypt, campos extras rejeitados e IDs válidos.
 
-Crie a pasta `src/schemas/` e dentro dela o arquivo `user.schema.ts`:
+## 1. Criar schemas de usuário
 
+<!-- file: src/schemas/user.schema.ts -->
 ```typescript
-// src/schemas/user.schema.ts
 import { z } from 'zod';
 
-export const createUserSchema = z.object({
-  body: z.object({
-    name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.').optional(),
-    email: z.email('Formato de e-mail inválido.'),
-    password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
-  }),
+export const idParams = z.object({
+  id: z.string().regex(/^\d+$/, 'ID deve ser numérico.').refine(value => {
+    const id = Number(value);
+    return Number.isSafeInteger(id) && id >= 1 && id <= 2147483647;
+  }, 'ID fora do intervalo permitido.'),
 });
 
-export const updateUserSchema = z.object({
-  body: z.object({
-    name: z.string().min(2, 'O nome deve ter pelo menos 2 caracteres.').optional(),
-    email: z.email('Formato de e-mail inválido.').optional(),
-    password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.').optional(),
-  }),
-  params: z.object({
-    id: z.string().refine((val) => /^\d+$/.test(val), { message: 'O ID deve ser numérico.' }),
-  }),
-});
+const password = z.string().min(8, 'Use pelo menos 8 caracteres.').refine(
+  value => Buffer.byteLength(value, 'utf8') <= 72,
+  'A senha deve ter no máximo 72 bytes em UTF-8.',
+);
+
+export const createUserBody = z.object({
+  name: z.string().trim().min(2).max(100).optional(),
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+  password,
+}).strict();
+
+export const updateUserBody = createUserBody.partial().refine(
+  value => Object.keys(value).length > 0,
+  'Informe pelo menos um campo.',
+);
+
+export const createUserSchema = z.object({ body: createUserBody });
+export const updateUserSchema = z.object({ body: updateUserBody, params: idParams });
+export const userIdSchema = z.object({ params: idParams });
 ```
 
-## 1️⃣7️⃣ Criando o Middleware Interceptador
+`.strict()` rejeita campos desconhecidos como `id`, `createdAt` e `role`. O limite da senha usa **bytes**, porque bcrypt considera até 72 bytes; não corte senhas silenciosamente. Atualizações vazias recebem 400.
 
-O Middleware é uma função que fica no "meio" do caminho entre a requisição do usuário e o nosso Controlador. Ele vai receber o esquema do Zod, validar os dados (`req.body`, `req.query`, `req.params`) e, caso algo esteja errado, bloquear a requisição e retornar um erro amigável, impedindo que o fluxo continue.
+## 2. Criar middleware que utiliza o resultado validado
 
-Crie a pasta `src/middlewares/` e o arquivo `validate.middleware.ts`:
-
+<!-- file: src/middlewares/validate.middleware.ts -->
 ```typescript
-// src/middlewares/validate.middleware.ts
-import { Request, Response, NextFunction } from 'express';
-import { ZodType, ZodError } from 'zod';
+import type { RequestHandler } from 'express';
+import { z } from 'zod';
 
-export const validate = (schema: ZodType) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // 🛡️ Valida a requisição contra o schema definido
-      await schema.parseAsync({
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
-      return next(); // Se estiver tudo certo, permite que a requisição siga para o Controller
-    } catch (error) {
-      if (error instanceof ZodError) {
-        // Formata os erros do Zod para uma resposta mais amigável
-        const formattedErrors = error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        }));
-        return res.status(400).json({ errors: formattedErrors });
-      }
-      return res.status(500).json({ error: 'Erro interno na validação dos dados.' });
-    }
-  };
+export const validate = (schema: z.ZodType): RequestHandler => async (req, res, next) => {
+  const result = await schema.safeParseAsync({ body: req.body, params: req.params, query: req.query });
+  if (!result.success) {
+    res.status(400).json({ errors: result.error.issues.map(issue => ({
+      path: issue.path.join('.'),
+      message: issue.message,
+    })) });
+    return;
+  }
+  const parsed = result.data as { body?: unknown };
+  if ('body' in parsed) req.body = parsed.body;
+  next();
 };
 ```
 
-## 1️⃣8️⃣ Aplicando o Middleware nas Rotas
+> [!IMPORTANT]
+> O Zod devolve um novo resultado. Validar e descartar esse resultado mantém a entrada original. Aqui `req.body` é substituído pelo valor normalizado. Os IDs permanecem strings validadas em `req.params`; o controlador os converte. Não atribua a `req.query`, que é um getter no Express 5.
 
-Agora precisamos plugar o nosso validador nas rotas! Vamos dizer para o mapa de rotas: "Antes de chamar o Controlador, passe pelo Validador".
+## 3. Substituir as rotas
 
-Atualize o arquivo `src/routes/user.route.ts`:
-
+<!-- file: src/routes/user.route.ts -->
 ```typescript
-// src/routes/user.route.ts
-import express from 'express';
-import { UserController } from '../controllers/user.controller';
-import { validate } from '../middlewares/validate.middleware';
-import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
+import { Router } from 'express';
+import { UserController } from '../controllers/user.controller.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createUserSchema, updateUserSchema, userIdSchema } from '../schemas/user.schema.js';
 
-const app = express.Router();
-
-// 📍 Mapeamento das Rotas de Usuário com Validação (Zod)
-app.post('/users', validate(createUserSchema), UserController.createUser);
-app.get('/users', UserController.getAllUsers);
-app.get('/users/:id', UserController.getUserById);
-app.put('/users/:id', validate(updateUserSchema), UserController.updateUser);
-app.delete('/users/:id', UserController.deleteUser);
-
-export default app;
+const router = Router();
+router.post('/users', validate(createUserSchema), UserController.createUser);
+router.get('/users', UserController.getAllUsers);
+router.get('/users/:id', validate(userIdSchema), UserController.getUserById);
+router.put('/users/:id', validate(updateUserSchema), UserController.updateUser);
+router.delete('/users/:id', validate(userIdSchema), UserController.deleteUser);
+export default router;
 ```
 
-## 1️⃣9️⃣ O Controlador Limpo
+O controlador completo do capítulo 3 pode ser mantido. Sua verificação básica no cadastro é redundante após o middleware, mas não impede o funcionamento e não exige substituir parcialmente a classe.
 
-Como a validação agora é feita de forma automática e centralizada pelo middleware `validate`, o nosso `UserController` não precisa se preocupar com dados mal formatados. O código fica muito mais focado no fluxo de negócio!
+## 4. Conferir rejeição e normalização
 
-Veja como o `src/controllers/user.controller.ts` fica estruturado:
-
-```typescript
-// src/controllers/user.controller.ts
-import { Request, Response } from 'express';
-import { UserService } from '../services/user.service';
-
-export class UserController {
-  static async createUser(req: Request, res: Response) {
-    const { name, email, password } = req.body;
-
-    try {
-      const novoUser = await UserService.createUser({ name, email, password });
-      console.log(`Usuário criado: ${novoUser.email}`);
-      return res.status(201).json(novoUser);
-    } catch (error: any) {
-      if (error?.sqlState === '23505' || error?.code === 'P2002' || error?.message?.includes('unique constraint')) {
-        return res.status(409).json({ error: 'Este e-mail já está em uso.' });
-      }
-      return res.status(500).json({ error: 'Erro interno ao salvar usuário.' });
-    }
-  }
-
-  // ... (restante do controlador permanece igual)
-}
+```bat
+npm run typecheck
 ```
 
-> [!TIP]  
-> **Segurança e Agilidade!** 🚀  
-> Com essa abordagem, o seu `UserController` tem a garantia absoluta de que `req.body` contém os dados no formato exato que ele espera (exigido pelo Zod). Nenhum payload malicioso ou mal formatado chegará à camada de Serviços!
+Com a API aberta, em outro CMD:
 
----
-➡️ *Quer trancar as portas da sua API? Siga para a Parte 5:* [05-autenticacao-com-jwt.md](./05-autenticacao-com-jwt.md)
+```bat
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"email-invalido\",\"password\":\"123\"}" http://localhost:3000/users
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"valido@example.com\",\"password\":\"Teste123!\",\"id\":99}" http://localhost:3000/users
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\" NORMALIZADO@EXAMPLE.COM \",\"password\":\"Teste123!\"}" http://localhost:3000/users
+```
+
+Espere **400**, **400** e **201**, respectivamente. Na terceira resposta, `email` deve ser `normalizado@example.com`. Se já cadastrou esse e-mail, use outro para não receber 409.
+
+## Conferência antes de avançar
+
+- [ ] Campo desconhecido rejeitado.
+- [ ] E-mail normalizado chega ao banco.
+- [ ] Senha curta ou acima de 72 bytes recebe 400.
+- [ ] Atualização vazia e IDs inválidos recebem 400.
+- [ ] `npm run typecheck` conclui sem erro.
+
+Referências: [parsing no Zod](https://zod.dev/basics) · [schemas no Zod](https://zod.dev/api).
+
+[← Anterior](03-criando-rotas-serv-contro.md) · [05 · Autenticação e autorização →](05-autenticacao-com-jwt.md)

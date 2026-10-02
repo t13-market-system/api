@@ -1,276 +1,326 @@
-# 🔐 Autenticação com JWT e Rotas Protegidas
+# 05 · Autenticação, autorização e cookies
 
-> [!NOTE]  
-> Agora que nossa API consegue cadastrar e validar os dados de um usuário, precisamos de um sistema de **Login**. O objetivo é gerar um "crachá de acesso" (Token JWT) para o usuário logado e exigir esse crachá sempre que ele tentar acessar áreas restritas (como listar ou deletar contas).
+[← Anterior](04-validacao-de-dados-com-zod.md) · [Índice](../README.md) · **Etapa 5 de 11** · [Próxima →](06-monitorizacao-e-logs-com-winston.md)
 
-## 2️⃣0️⃣ Esquema de Validação do Login
+## Resultado desta etapa
 
-Antes de tentar logar alguém, precisamos garantir que a requisição trouxe um e-mail e uma senha.
+Login com JWT de 15 minutos; acesso por Bearer ou cookie HttpOnly; cada usuário consulta, altera e exclui apenas a própria conta.
 
-Crie o arquivo `src/schemas/auth.schema.ts`:
+| Rota | Acesso após este capítulo |
+|---|---|
+| `POST /users` | Público, com validação |
+| `POST /login` | Público, com validação |
+| `POST /logout` | Limpa o cookie; não revoga tokens Bearer já emitidos |
+| `GET /users` | Autenticado; devolve uma lista com **a própria conta**, não todas as contas |
+| `GET`, `PUT`, `DELETE /users/:id` | Autenticado; `id` deve ser o do token |
 
+Não há papel de administrador neste tutorial. Autenticar alguém não concede permissão para alterar contas alheias.
+
+## 1. Criar o schema de login
+
+<!-- file: src/schemas/auth.schema.ts -->
 ```typescript
-// src/schemas/auth.schema.ts
 import { z } from 'zod';
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.email('Formato de e-mail inválido.'),
-    password: z.string().min(1, 'A senha é obrigatória.'),
-  }),
+    email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+    password: z.string().min(1).refine(value => Buffer.byteLength(value, 'utf8') <= 72),
+  }).strict(),
 });
 ```
 
-## 2️⃣1️⃣ Serviço de Autenticação (A Lógica)
+## 2. Criar o serviço de autenticação
 
-O Serviço vai buscar o usuário no banco, verificar se a senha bate (usando o bcrypt) e, se tudo estiver certo, assinar e devolver um Token.
-
-Crie o arquivo `src/services/auth.service.ts`:
-
+<!-- file: src/services/auth.service.ts -->
 ```typescript
-// src/services/auth.service.ts
-import { prisma as db } from '../lib/prisma';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { db } from '../prisma/db.js';
+import { env } from '../config/env.js';
+import { HttpError } from '../lib/http-error.js';
+import { toPublicUser } from './user.service.js';
 
 export class AuthService {
-  static async login(data: any) {
-    // 1. Busca o usuário pelo e-mail
+  static async login(data: { email: string; password: string }) {
     const user = await db.orm.public.User.first({ email: data.email });
-    if (!user) {
-      throw new Error('Credenciais inválidas.');
+    if (!user || !(await bcrypt.compare(data.password, user.password))) {
+      throw new HttpError(401, 'Credenciais inválidas.');
     }
-
-    // 2. Verifica se a senha está correta
-    const senhaValida = await bcrypt.compare(data.password, user.password);
-    if (!senhaValida) {
-      throw new Error('Credenciais inválidas.');
-    }
-
-    // 3. Gera o Token JWT com duração de 1 dia
-    const secret = process.env.JWT_SECRET || 'chave-secreta-fallback';
-    const token = jwt.sign(
-      { id: user.id, email: user.email }, // Payload (dados públicos)
-      secret,                             // Chave secreta (.env)
-      { expiresIn: '1d' }                 // Validade
-    );
-
-    return { token, user: { id: user.id, name: user.name, email: user.email } };
+    const token = jwt.sign({ id: user.id }, env.JWT_SECRET, {
+      algorithm: 'HS256',
+      expiresIn: '15m',
+      issuer: 'express-tutorial',
+      audience: 'express-api',
+    });
+    return { token, user: toPublicUser(user) };
   }
 }
 ```
 
-## 2️⃣2️⃣ Controlador e Rota de Login
+Não existe chave secreta de fallback. A aplicação falha ao iniciar se `JWT_SECRET` estiver ausente ou curta. O cliente recebe o mesmo erro de credenciais para usuário inexistente ou senha incorreta; falhas internas são tratadas como 500 pelo middleware central.
 
-O Controlador vai receber os dados da internet, passar para o Serviço e devolver o Token para o usuário.
+## 3. Criar controlador e rotas de autenticação
 
-**A.** Crie o arquivo `src/controllers/auth.controller.ts`:
-
+<!-- file: src/controllers/auth.controller.ts -->
 ```typescript
-// src/controllers/auth.controller.ts
-import { Request, Response } from 'express';
-import { AuthService } from '../services/auth.service';
+import type { Request, Response } from 'express';
+import { AuthService } from '../services/auth.service.js';
+import { env } from '../config/env.js';
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+};
 
 export class AuthController {
   static async login(req: Request, res: Response) {
-    try {
-      const { email, password } = req.body;
-      const result = await AuthService.login({ email, password });
-      
-      return res.status(200).json(result);
-    } catch (error: any) {
-      return res.status(401).json({ error: error.message });
-    }
+    const result = await AuthService.login(req.body);
+    res.cookie('token', result.token, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+    res.json(result);
+  }
+  static logout(_req: Request, res: Response) {
+    res.clearCookie('token', cookieOptions);
+    res.status(204).send();
   }
 }
 ```
 
-**B.** Crie o mapa de rotas em `src/routes/auth.route.ts`:
-
+<!-- file: src/routes/auth.route.ts -->
 ```typescript
-// src/routes/auth.route.ts
-import express from 'express';
-import { AuthController } from '../controllers/auth.controller';
-import { validate } from '../middlewares/validate.middleware';
-import { loginSchema } from '../schemas/auth.schema';
-
-const app = express.Router();
-
-// 📍 Rota de Login protegida pelo Zod
-app.post('/login', validate(loginSchema), AuthController.login);
-
-export default app;
-```
-
-**C.** E não se esqueça de ativar essa rota no arquivo central `src/routes/index.ts`:
-
-```typescript
-// src/routes/index.ts
 import { Router } from 'express';
-import userRoutes from './user.route';
-import authRoutes from './auth.route'; // 👈 NOVA IMPORTAÇÃO
+import { AuthController } from '../controllers/auth.controller.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { loginSchema } from '../schemas/auth.schema.js';
 
-const routes = Router();
-
-routes.use(userRoutes);
-routes.use(authRoutes); // 👈 ATIVANDO AS ROTAS DE AUTH
-
-export default routes;
+const router = Router();
+router.post('/login', validate(loginSchema), AuthController.login);
+router.post('/logout', AuthController.logout);
+export default router;
 ```
 
-## 2️⃣3️⃣ O "Leão de Chácara" (Middleware JWT)
+## 4. Validar o token e a permissão sobre a conta
 
-Agora nós temos um Token! Mas como exigimos que o usuário mostre esse token para acessar outras rotas? Criando um middleware interceptador focado em segurança.
-
-Crie o arquivo `src/middlewares/auth.middleware.ts`:
-
+<!-- file: src/middlewares/auth.middleware.ts -->
 ```typescript
-// src/middlewares/auth.middleware.ts
-import { Request, Response, NextFunction } from 'express';
+import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  // 1. O Token geralmente vem no Header: "Authorization: Bearer <token>"
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Token não fornecido.' });
+export const authMiddleware: RequestHandler = (req, res, next) => {
+  const authorization = req.get('authorization');
+  let token: string | undefined;
+  if (authorization !== undefined) {
+    const match = /^Bearer ([^\s]+)$/i.exec(authorization);
+    if (!match) {
+      res.status(401).json({ error: 'Cabeçalho Authorization inválido.' });
+      return;
+    }
+    token = match[1];
+  } else if (typeof req.cookies?.token === 'string') {
+    token = req.cookies.token;
   }
-
-  // 2. Extrai a palavra "Bearer " e pega só o código do token
-  const [, token] = authHeader.split(' ');
-
+  if (!token) {
+    res.status(401).json({ error: 'Token não fornecido.' });
+    return;
+  }
+  // Cookies são enviados automaticamente pelo navegador: mutações exigem origem confiável.
+  const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+  if (authorization === undefined && unsafe &&
+      ![env.FRONTEND_ORIGIN, env.API_ORIGIN].includes(req.get('origin') ?? '')) {
+    res.status(403).json({ error: 'Origem obrigatória e confiável para autenticação por cookie.' });
+    return;
+  }
   try {
-    const secret = process.env.JWT_SECRET || 'chave-secreta-fallback';
-    
-    // 3. Valida a assinatura do Token
-    const decoded = jwt.verify(token, secret);
-    
-    // 4. Injeta os dados do usuário na requisição para uso nos próximos Controllers
-    (req as any).user = decoded;
-    
-    return next(); // Tudo certo, pode entrar!
-  } catch (error) {
-    return res.status(401).json({ error: 'Token inválido ou expirado.' });
+    const payload = jwt.verify(token, env.JWT_SECRET, {
+      algorithms: ['HS256'], issuer: 'express-tutorial', audience: 'express-api',
+    });
+    if (typeof payload === 'string' || !Number.isInteger(payload.id) ||
+        payload.id < 1 || payload.id > 2147483647) {
+      throw new Error('Payload inválido.');
+    }
+    res.locals.userId = payload.id;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token inválido ou expirado.' });
   }
+};
+
+export const requireSelf: RequestHandler = (req, res, next) => {
+  if (Number(req.params.id) !== res.locals.userId) {
+    res.status(403).json({ error: 'Você só pode acessar a própria conta.' });
+    return;
+  }
+  next();
 };
 ```
 
-## 2️⃣4️⃣ Trancando as Portas (Rotas Protegidas)
+Bearer tem precedência quando o cabeçalho está presente. Tokens malformados, expirados, de outro emissor, audiência ou algoritmo são rejeitados. Nas rotas de conta com cookie, operações de escrita exigem `Origin` permitido; isso reduz o risco de CSRF. No capítulo 7 aplicaremos uma política de origem também às rotas públicas.
 
-Agora é só escolher quais rotas exigem esse "crachá". Vamos bloquear a listagem, edição e exclusão de usuários!
+## 5. Substituir o controlador de usuários
 
-Abra o arquivo `src/routes/user.route.ts` e atualize:
+A diferença de política está em `getAllUsers`: a rota passa a devolver apenas o registro do usuário autenticado. O método de listagem global do serviço anterior deixa de ser usado por rotas públicas.
 
+<!-- file: src/controllers/user.controller.ts -->
 ```typescript
-// src/routes/user.route.ts
-import express from 'express';
-import { UserController } from '../controllers/user.controller';
-import { validate } from '../middlewares/validate.middleware';
-import { createUserSchema, updateUserSchema } from '../schemas/user.schema';
-import { authMiddleware } from '../middlewares/auth.middleware'; // 👈 IMPORTANDO O SEGURANÇA
+import type { Request, Response } from 'express';
+import { UserService, toPublicUser } from '../services/user.service.js';
 
-const app = express.Router();
-
-// 🔓 Rota Pública (Qualquer um pode criar conta)
-app.post('/users', validate(createUserSchema), UserController.createUser);
-
-// 🔒 Rotas Privadas (Exigem o authMiddleware)
-app.get('/users', authMiddleware, UserController.getAllUsers);
-app.get('/users/:id', authMiddleware, UserController.getUserById);
-app.put('/users/:id', authMiddleware, validate(updateUserSchema), UserController.updateUser);
-app.delete('/users/:id', authMiddleware, UserController.deleteUser);
-
-export default app;
+export class UserController {
+  static async createUser(req: Request, res: Response) {
+    const user = await UserService.createUser(req.body);
+    res.status(201).json(toPublicUser(user));
+  }
+  static async getAllUsers(_req: Request, res: Response) {
+    const user = await UserService.getUserById(res.locals.userId);
+    res.json([toPublicUser(user)]);
+  }
+  static async getUserById(req: Request, res: Response) {
+    res.json(toPublicUser(await UserService.getUserById(Number(req.params.id))));
+  }
+  static async updateUser(req: Request, res: Response) {
+    res.json(toPublicUser(await UserService.updateUser(Number(req.params.id), req.body)));
+  }
+  static async deleteUser(req: Request, res: Response) {
+    await UserService.deleteUser(Number(req.params.id));
+    res.status(204).send();
+  }
+}
 ```
 
-> [!IMPORTANT]  
-> **Pronto! Sua API agora tem controle de acesso profissional.** 🚀  
-> Teste o seu login enviando um POST para `/login`, copie o `token` gerado, e envie-o no Header `Authorization` como `Bearer SEU_TOKEN_AQUI` para conseguir listar os usuários no `/users`!
+## 6. Substituir rotas e aplicação preservando as funcionalidades
 
-## 2️⃣5️⃣ Configurando o CORS para o Front-End
+<!-- file: src/routes/user.route.ts -->
+```typescript
+import { Router } from 'express';
+import { UserController } from '../controllers/user.controller.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createUserSchema, updateUserSchema, userIdSchema } from '../schemas/user.schema.js';
+import { authMiddleware, requireSelf } from '../middlewares/auth.middleware.js';
 
-Para que uma aplicação Front-End (como o React) rodando em uma porta diferente (ex: `5173`) consiga bater no `/login` e trafegar cookies via Axios de forma segura, precisamos configurar a permissão de **CORS**. 
-
-Pare a sua API e instale o pacote:
-```bash
-npm install cors
-npm install -D @types/cors
+const router = Router();
+router.post('/users', validate(createUserSchema), UserController.createUser);
+router.get('/users', authMiddleware, UserController.getAllUsers);
+router.get('/users/:id', authMiddleware, validate(userIdSchema), requireSelf, UserController.getUserById);
+router.put('/users/:id', authMiddleware, validate(updateUserSchema), requireSelf, UserController.updateUser);
+router.delete('/users/:id', authMiddleware, validate(userIdSchema), requireSelf, UserController.deleteUser);
+export default router;
 ```
 
-Crie o arquivo `src/middlewares/cors.middleware.ts`:
+<!-- file: src/routes/index.ts -->
+```typescript
+import { Router } from 'express';
+import userRoutes from './user.route.js';
+import authRoutes from './auth.route.js';
+
+const routes = Router();
+routes.use(userRoutes);
+routes.use(authRoutes);
+export default routes;
+```
+
+<!-- file: src/middlewares/cors.middleware.ts -->
 ```typescript
 import cors from 'cors';
+import { env } from '../config/env.js';
 
 export const corsMiddleware = cors({
-  origin: 'http://localhost:5173', // A exata URL do seu Front-End
-  credentials: true, // Permite que a API receba/envie Cookies (HttpOnly)
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
-  allowedHeaders: ['Content-Type', 'Authorization'] // Cabeçalhos permitidos
+  origin: [env.FRONTEND_ORIGIN, env.API_ORIGIN],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 });
 ```
 
-E ative ele no seu `src/server.ts` **antes** das rotas:
+<!-- file: src/app.ts -->
 ```typescript
-import { corsMiddleware } from './middlewares/cors.middleware';
-
-// ...
-app.use(corsMiddleware); // <- Adicione aqui, antes do app.use(express.json()) e das rotas
-```
-
-## 2️⃣6️⃣ Salvando o Token em Cookie HTTP Only
-
-Para enviar e ler cookies no seu servidor (aumentando a segurança e evitando armazenar tokens no `localStorage` do frontend), precisamos do pacote `cookie-parser`.
-
-Instale o pacote:
-```bash
-npm install cookie-parser
-npm install -D @types/cookie-parser
-```
-
-Ative ele no seu `src/server.ts` logo após o CORS:
-```typescript
+import express from 'express';
 import cookieParser from 'cookie-parser';
+import routes from './routes/index.js';
+import { corsMiddleware } from './middlewares/cors.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
-// ...
-app.use(corsMiddleware); // Nosso middleware de CORS
-app.use(cookieParser()); // Middleware para ler cookies
+export const app = express();
+app.use(corsMiddleware);
+app.use(cookieParser());
+app.use(express.json({ limit: '16kb' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use(routes);
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+app.use(errorHandler);
 ```
 
-Agora, no seu `src/controllers/auth.controller.ts`, configure para enviar o token pelo cookie quando o login tiver sucesso:
-```typescript
-            const result = await AuthService.login({ email, password });
-            
-            // Salvando o token em um cookie HTTP Only
-            res.cookie('token', result.token, {
-                httpOnly: true,       // Protege contra XSS
-                secure: false,        // Use 'true' em produção com HTTPS
-                sameSite: 'lax',      // Bom para segurança entre a mesma origem
-                maxAge: 24 * 60 * 60 * 1000 // 1 dia
-            });
+## 7. Verificar login, token e cookies
 
-            return res.status(200).json(result);
+```bat
+npm run typecheck
 ```
 
-Por fim, atualize o `src/middlewares/auth.middleware.ts` para que ele consiga extrair o token que está vindo dos cookies em todas as requisições autenticadas:
-```typescript
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-    // Busca o token nos cookies ou no header Authorization
-    let token = req.cookies?.token;
+Com o servidor em execução, crie uma conta de teste se ainda não houver uma e teste:
 
-    if (!token) {
-        const authHeader = req.headers.authorization;
-        if (authHeader) {
-            [, token] = authHeader.split(' ');
-        }
-    }
-
-    if (!token) {
-        return res.status(401).json({ error: 'Token nao fornecido' });
-    }
-    
-    // ... restante do código do middleware
+```bat
+curl.exe -i http://localhost:3000/users
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"login@example.com\",\"password\":\"Teste123!\",\"name\":\"Pessoa Teste\"}" http://localhost:3000/users
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"login@example.com\",\"password\":\"SenhaErrada\"}" http://localhost:3000/login
+curl.exe -i -c cookies.txt -H "Content-Type: application/json" -d "{\"email\":\"login@example.com\",\"password\":\"Teste123!\"}" http://localhost:3000/login
+curl.exe -i -b cookies.txt http://localhost:3000/users
 ```
 
----
-➡️ *Que tal registrar tudo o que acontece? Siga para a Parte 6:* [06-monitorizacao-e-logs-com-winston.md](./06-monitorizacao-e-logs-com-winston.md)
+Espere 401, 201, 401, 200 e 200. O login deve devolver `token`, usuário sem `password` e cabeçalho `Set-Cookie` com `HttpOnly`. O arquivo temporário `cookies.txt` contém um token: não o versione; exclua-o quando encerrar o teste.
+
+Copie o token para o CMD:
+
+```bat
+set TOKEN=COLE_O_TOKEN_DO_LOGIN
+curl.exe -i -H "Authorization: Bearer %TOKEN%" http://localhost:3000/users
+```
+
+Consulte o próprio ID: 200. Consulte um ID de outra conta com o mesmo token: 403. IDs inválidos recebem 400 **após autenticar**. Sem autenticação, recebem 401.
+
+Teste cookie em uma atualização, substituindo o ID:
+
+```bat
+curl.exe -i -X PUT -b cookies.txt -H "Origin: http://localhost:5173" -H "Content-Type: application/json" -d "{\"name\":\"Nome Atualizado\"}" http://localhost:3000/users/1
+curl.exe -i -X POST -b cookies.txt -c cookies.txt http://localhost:3000/logout
+```
+
+A atualização deve retornar 200; sem a origem confiável, 403. Logout retorna 204 e limpa o cookie. Para Bearer, o cliente deve descartar o token.
+
+<details>
+<summary>Usar o cookie no frontend</summary>
+
+Execute no navegador de um frontend em `http://localhost:5173`, usando consistentemente `localhost` nas duas aplicações:
+
+```javascript
+const response = await fetch('http://localhost:3000/login', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'login@example.com', password: 'Teste123!' }),
+});
+const result = await response.json();
+console.log(response.status, result.user);
+```
+
+Nas requisições posteriores também use `credentials: 'include'`. No Axios, a opção equivalente é `withCredentials: true`. Não é necessário copiar o token para `localStorage`.
+
+Cookies `SameSite=Lax` deste exercício pressupõem frontend e API no mesmo site, como `localhost` em portas diferentes. Sites distintos precisam de uma política de cookie/CSRF própria; não basta trocar `origin` por `*`.
+
+</details>
+
+> [!NOTE]
+> JWTs são válidos por 15 minutos. Logout e troca de senha não revogam imediatamente os tokens já emitidos. Uma aplicação que precise de revogação imediata deve adicionar sessões ou um mecanismo de revogação. Em produção, cookies `Secure` exigem HTTPS; configure `API_ORIGIN` e `FRONTEND_ORIGIN` com as origens reais, sem caminhos ou barra final.
+
+## Conferência antes de avançar
+
+- [ ] Login correto retorna 200; credenciais incorretas, 401.
+- [ ] JWT sem segredo configurado não permite iniciar a aplicação.
+- [ ] Acesso sem token é bloqueado; outra conta recebe 403.
+- [ ] Bearer e cookie funcionam; cookie em mutações exige origem confiável.
+- [ ] Respostas de usuários e login não contêm hash de senha.
+
+Referências: [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) · [CORS no Express](https://expressjs.com/en/resources/middleware/cors.html).
+
+[← Anterior](04-validacao-de-dados-com-zod.md) · [06 · Logs →](06-monitorizacao-e-logs-com-winston.md)

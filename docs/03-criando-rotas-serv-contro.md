@@ -1,208 +1,280 @@
-# 🏗️ Arquitetura MVC: Rotas, Serviços e Controladores
+# 03 · Rotas, controladores e serviços
 
-> [!NOTE]  
-> Para manter o código profissional, fácil de ler e simples de manter, vamos separar nossas responsabilidades em três camadas fundamentais: **Services** (Regras de negócio), **Controllers** (Tráfego HTTP) e **Routes** (Mapa de URLs).
+[← Anterior](02-modelagem-e-sincronizacao-com-prisma.md) · [Índice](../README.md) · **Etapa 3 de 11** · [Próxima →](04-validacao-de-dados-com-zod.md)
 
-## 1️⃣2️⃣ Camada de Serviços (O Coração)
+## Resultado desta etapa
 
-Na nossa arquitetura limpa, a pasta `services/` é responsável **exclusivamente** por conversar com o banco de dados e aplicar regras de negócio (como criptografar senhas). O Serviço não sabe o que é a internet, requisições ou Express.
+CRUD de usuários, respostas sem hash de senha e tratamento central de erros. Todos os arquivos abaixo são completos: crie as pastas e substitua o arquivo quando ele já existir.
 
-Crie `src/services/user.service.ts` utilizando a sintaxe do **Prisma 8** (`db.orm.public.User`):
+> [!WARNING]
+> Até o capítulo 5, as rotas de usuários estão sem autenticação. Execute apenas localmente com dados de teste. O capítulo 5 restringe consultas, atualização e exclusão à própria conta.
 
+```mermaid
+sequenceDiagram
+    participant C as Cliente HTTP
+    participant R as Rota
+    participant T as Controlador
+    participant S as Serviço
+    participant D as PostgreSQL
+    C->>R: Requisição JSON
+    R->>T: Dados recebidos
+    T->>S: Operação tipada
+    S->>D: Consulta Prisma
+    D-->>S: Registro
+    S-->>T: Resultado
+    T-->>C: JSON sem password
+```
+
+## 1. Definir erros da aplicação
+
+<!-- file: src/lib/http-error.ts -->
 ```typescript
-// src/services/user.service.ts
-import { prisma as db } from '../lib/prisma';
+export class HttpError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+  }
+}
+```
+
+<!-- file: src/middlewares/error.middleware.ts -->
+```typescript
+import type { ErrorRequestHandler } from 'express';
+import { HttpError } from '../lib/http-error.js';
+
+export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error instanceof HttpError) {
+    res.status(error.status).json({ error: error.message });
+    return;
+  }
+  if (typeof error === 'object' && error !== null && 'sqlState' in error && error.sqlState === '23505') {
+    res.status(409).json({ error: 'Este e-mail já está em uso.' });
+    return;
+  }
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    if (error.status === 400) {
+      res.status(400).json({ error: 'JSON inválido.' });
+      return;
+    }
+    if (error.status === 413) {
+      res.status(413).json({ error: 'Corpo da requisição muito grande.' });
+      return;
+    }
+  }
+  console.error('Erro interno na API:', error);
+  res.status(500).json({ error: 'Erro interno do servidor.' });
+};
+```
+
+Express 5 encaminha rejeições de controladores `async` ao middleware de erros. Falhas de banco não devem ser expostas no JSON da resposta. A violação de unicidade do PostgreSQL usa `sqlState: '23505'` tanto no cadastro quanto na atualização.
+
+## 2. Criar o serviço
+
+<!-- file: src/services/user.service.ts -->
+```typescript
 import bcrypt from 'bcrypt';
+import { db } from '../prisma/db.js';
+import { HttpError } from '../lib/http-error.js';
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  name?: string;
+}
+export type UpdateUserInput = Partial<CreateUserInput>;
+type UserRow = Awaited<ReturnType<typeof db.orm.public.User.create>>;
+
+export const toPublicUser = (user: UserRow) => ({
+  id: user.id,
+  email: user.email,
+  name: user.name,
+  createdAt: user.createdAt,
+});
 
 export class UserService {
-  // 🟢 1. CRIAR USUÁRIO
-  static async createUser(data: any) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    const novoUser = await db.orm.public.User.create({
-      name: data.name,
+  static async createUser(data: CreateUserInput) {
+    return db.orm.public.User.create({
       email: data.email,
-      password: hashedPassword,
+      name: data.name ?? null,
+      password: await bcrypt.hash(data.password, 12),
     });
-    return novoUser;
   }
 
-  // 🔵 2. LISTAR TODOS OS USUÁRIOS
   static async getAllUsers() {
-    return await db.orm.public.User.all();
+    return db.orm.public.User.all();
   }
 
-  // 🟡 3. BUSCAR USUÁRIO POR ID
   static async getUserById(id: number) {
     const user = await db.orm.public.User.first({ id });
-    if (!user) throw new Error('Usuário não encontrado.');
+    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
     return user;
   }
 
-  // 🟠 4. ATUALIZAR USUÁRIO
-  static async updateUser(id: number, data: any) {
-    const userExiste = await db.orm.public.User.first({ id });
-    if (!userExiste) throw new Error('Usuário não encontrado.');
-
-    const dataToUpdate = { ...data };
-    if (data.password) {
-      dataToUpdate.password = await bcrypt.hash(data.password, 10);
-    }
-
-    const userAtualizado = await db.orm.public.User.where({ id }).update(dataToUpdate);
-    if (!userAtualizado) throw new Error('Usuário não encontrado.');
-
-    return userAtualizado;
+  static async updateUser(id: number, data: UpdateUserInput) {
+    const changes: UpdateUserInput = {};
+    if (data.name !== undefined) changes.name = data.name;
+    if (data.email !== undefined) changes.email = data.email;
+    if (data.password !== undefined) changes.password = await bcrypt.hash(data.password, 12);
+    if (Object.keys(changes).length === 0) throw new HttpError(400, 'Informe pelo menos um campo.');
+    const user = await db.orm.public.User.where({ id }).update(changes);
+    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
+    return user;
   }
 
-  // 🔴 5. REMOVER USUÁRIO
   static async deleteUser(id: number) {
-    const userExiste = await db.orm.public.User.first({ id });
-    if (!userExiste) throw new Error('Usuário não encontrado.');
-
-    await db.orm.public.User.where({ id }).delete();
-    return true;
+    const user = await db.orm.public.User.where({ id }).delete();
+    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
   }
 }
 ```
 
-## 1️⃣3️⃣ Camada de Controladores (O Garçom)
+A atualização envia apenas `name`, `email` e `password`, e não todo o corpo recebido. `id` e `createdAt` não são editáveis. A operação retorna o registro atualizado ou `null`, dispensando uma consulta prévia sujeita a corrida.
 
-O Controlador é o intermediário perfeito. A única função dele é extrair os dados da requisição HTTP (`req`), mandar pro nosso Serviço processar, e devolver a resposta formatada (`res`) para o usuário.
+## 3. Criar o controlador
 
-Crie o arquivo `src/controllers/user.controller.ts`:
-
+<!-- file: src/controllers/user.controller.ts -->
 ```typescript
-// src/controllers/user.controller.ts
-import { Request, Response } from 'express';
-import { UserService } from '../services/user.service';
+import type { Request, Response } from 'express';
+import { UserService, toPublicUser } from '../services/user.service.js';
+import { HttpError } from '../lib/http-error.js';
+
+const readId = (req: Request) => {
+  const value = String(req.params.id);
+  const id = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(id) || id < 1 || id > 2147483647) {
+    throw new HttpError(400, 'ID deve ser um inteiro positivo válido.');
+  }
+  return id;
+};
 
 export class UserController {
   static async createUser(req: Request, res: Response) {
-    const { name, email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email e senha obrigatórios.' });
-
-    try {
-      const novoUser = await UserService.createUser({ name, email, password });
-      console.log(`Usuário criado: ${novoUser.email}`);
-      return res.status(201).json(novoUser);
-    } catch (error: any) {
-      if (error?.sqlState === '23505' || error?.code === 'P2002' || error?.message?.includes('unique constraint')) {
-        return res.status(409).json({ error: 'Este e-mail já está em uso.' });
-      }
-      return res.status(500).json({ error: 'Erro interno ao salvar usuário.' });
+    const { email, password, name } = req.body ?? {};
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      throw new HttpError(400, 'E-mail e senha obrigatórios.');
     }
+    const user = await UserService.createUser({ email, password, name });
+    res.status(201).json(toPublicUser(user));
   }
-
-  static async getAllUsers(req: Request, res: Response) {
-    try {
-      const users = await UserService.getAllUsers();
-      return res.status(200).json(users);
-    } catch (error) {
-      return res.status(500).json({ error: 'Erro interno ao buscar usuários.' });
-    }
+  static async getAllUsers(_req: Request, res: Response) {
+    res.json((await UserService.getAllUsers()).map(toPublicUser));
   }
-
   static async getUserById(req: Request, res: Response) {
-    try {
-      const user = await UserService.getUserById(Number(req.params.id));
-      return res.status(200).json(user);
-    } catch (error: any) {
-      if (error.message === 'Usuário não encontrado.') return res.status(404).json({ error: error.message });
-      return res.status(500).json({ error: 'Erro interno ao buscar usuário.' });
-    }
+    res.json(toPublicUser(await UserService.getUserById(readId(req))));
   }
-
   static async updateUser(req: Request, res: Response) {
-    try {
-      const user = await UserService.updateUser(Number(req.params.id), req.body);
-      return res.status(200).json(user);
-    } catch (error: any) {
-      if (error.message === 'Usuário não encontrado.') return res.status(404).json({ error: error.message });
-      if (error?.code === 'P2002' || error?.message?.includes('unique constraint')) return res.status(409).json({ error: 'E-mail em uso.' });
-      return res.status(500).json({ error: 'Erro interno ao atualizar usuário.' });
-    }
+    res.json(toPublicUser(await UserService.updateUser(readId(req), req.body ?? {})));
   }
-
   static async deleteUser(req: Request, res: Response) {
-    try {
-      await UserService.deleteUser(Number(req.params.id));
-      return res.status(200).json({ message: 'Usuário removido com sucesso.' });
-    } catch (error: any) {
-      if (error.message === 'Usuário não encontrado.') return res.status(404).json({ error: error.message });
-      return res.status(500).json({ error: 'Erro interno ao remover usuário.' });
-    }
+    await UserService.deleteUser(readId(req));
+    res.status(204).send();
   }
 }
 ```
 
-## 1️⃣4️⃣ Camada de Rotas (O Mapa da API)
+## 4. Criar e conectar somente as rotas existentes
 
-Agora que separamos a lógica pesada, veja como o arquivo de rotas fica elegante. Ele funciona estritamente como um mapa, conectando uma URL a uma função direta do Controlador.
-
-Crie o arquivo `src/routes/user.route.ts`:
-
+<!-- file: src/routes/user.route.ts -->
 ```typescript
-// src/routes/user.route.ts
-import express from 'express';
-import { UserController } from '../controllers/user.controller';
+import { Router } from 'express';
+import { UserController } from '../controllers/user.controller.js';
 
-const app = express.Router();
-
-// 📍 Mapeamento das Rotas de Usuário
-app.post('/users', UserController.createUser);
-app.get('/users', UserController.getAllUsers);
-app.get('/users/:id', UserController.getUserById);
-app.put('/users/:id', UserController.updateUser);
-app.delete('/users/:id', UserController.deleteUser);
-
-export default app;
+const router = Router();
+router.post('/users', UserController.createUser);
+router.get('/users', UserController.getAllUsers);
+router.get('/users/:id', UserController.getUserById);
+router.put('/users/:id', UserController.updateUser);
+router.delete('/users/:id', UserController.deleteUser);
+export default router;
 ```
 
-> [!TIP]  
-> **Arquitetura Desacoplada**  
-> Se no futuro precisarmos mudar de banco de dados, mexemos **apenas** no Service. Se precisarmos mudar a forma como a internet acessa os dados, mexemos **apenas** no Controller. Mágico, não? ✨
-
-## 1️⃣5️⃣ Conectando as Rotas ao Servidor Central
-
-Agora que temos nossas rotas criadas, precisamos avisar o servidor (`server.ts`) de que elas existem. Uma excelente prática é ter um arquivo centralizador de rotas.
-
-**A.** Crie o arquivo `index.ts` dentro de `src/routes/`:
-
+<!-- file: src/routes/index.ts -->
 ```typescript
-// src/routes/index.ts
 import { Router } from 'express';
-import userRoutes from './user.route';
-import clienteRoutes from './cliente.route'; // Exemplo caso tenha mais rotas
+import userRoutes from './user.route.js';
 
 const routes = Router();
-
 routes.use(userRoutes);
-routes.use(clienteRoutes);
-
 export default routes;
 ```
 
-**B.** Atualize o seu `src/server.ts` para importar este arquivo central e plugar as rotas no app:
+Não há import de `cliente.route.ts`: esse recurso só será criado no capítulo 10.
 
+Substitua `src/app.ts`:
+
+<!-- file: src/app.ts -->
 ```typescript
-// src/server.ts
 import express from 'express';
-import routes from './routes/index';
+import routes from './routes/index.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
-const app = express();
-const port = 3000;
-
-app.use(express.json());
-app.use(routes); // 🔌 Aqui conectamos todas as rotas!
-
-app.listen(port, () => {
-  console.log(`🚀 Servidor rodando na porta ${port}`);
-});
+export const app = express();
+app.use(express.json({ limit: '16kb' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use(routes);
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+app.use(errorHandler);
 ```
 
-> [!IMPORTANT]  
-> **Tudo Pronto! 🎉**  
-> Volte para o seu CMD e rode o comando `npm run dev`. O seu projeto agora tem uma separação de camadas limpa, uma integração moderna com o Prisma 8, e está com o servidor perfeitamente exposto para a internet!
+Substitua `src/server.ts`. O servidor escuta HTTP; `app.ts` pode ser importado pelos testes sem abrir uma porta fixa.
 
----
-➡️ *Quer mais segurança? Siga para a Parte 4:* [04-validacao-de-dados-com-zod.md](./04-validacao-de-dados-com-zod.md)
+<!-- file: src/server.ts -->
+```typescript
+import { app } from './app.js';
+import { env } from './config/env.js';
+import { db } from './prisma/db.js';
+
+const server = app.listen(env.PORT, () => {
+  console.log(`API disponível em http://localhost:${env.PORT}`);
+});
+const shutdown = () => {
+  server.close(() => {
+    void db.close().then(() => process.exit(0)).catch(() => process.exit(1));
+  });
+};
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
+```
+
+## 5. Testar o CRUD local
+
+```bat
+npm run typecheck
+npm run dev
+```
+
+Em outro CMD, cadastre um usuário:
+
+```bat
+curl.exe -i -H "Content-Type: application/json" -d "{\"email\":\"teste@example.com\",\"password\":\"Teste123!\",\"name\":\"Pessoa Teste\"}" http://localhost:3000/users
+curl.exe -i http://localhost:3000/users
+```
+
+Anote o `id` devolvido. Os exemplos seguintes usam `1`; substitua pelo ID real.
+
+```bat
+curl.exe -i http://localhost:3000/users/1
+curl.exe -i -X PUT -H "Content-Type: application/json" -d "{\"name\":\"Nome Alterado\"}" http://localhost:3000/users/1
+curl.exe -i -X DELETE http://localhost:3000/users/1
+curl.exe -i http://localhost:3000/users/1
+```
+
+| Operação | Resultado esperado |
+|---|---|
+| Cadastro | 201, sem `password` |
+| E-mail repetido antes da exclusão | 409 |
+| Listagem/consulta/edição | 200, sem `password` |
+| ID textual, negativo, zero ou fora de `Int` | 400 |
+| Exclusão | 204, sem corpo |
+| Consulta após exclusão | 404 |
+
+## Conferência antes de avançar
+
+- [ ] Projeto compila; nenhuma rota inexistente foi importada.
+- [ ] CRUD testado com um usuário descartável.
+- [ ] Hash de senha ausente em todas as respostas.
+- [ ] Erros públicos não revelam SQL, credenciais ou stack.
+
+Referência: [erros no Express](https://expressjs.com/en/guide/error-handling.html).
+
+[← Anterior](02-modelagem-e-sincronizacao-com-prisma.md) · [04 · Validação →](04-validacao-de-dados-com-zod.md)

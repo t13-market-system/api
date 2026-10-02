@@ -1,113 +1,163 @@
-# 📊 Monitorização e Logs Profissionais (Winston & Morgan)
+# 06 · Logs com Winston e Morgan
 
-> [!NOTE]  
-> Usar `console.log` é ótimo para o desenvolvimento inicial, mas péssimo para produção. Em um ambiente real, precisamos de logs bem estruturados (com data, hora e níveis de severidade) para investigar bugs. Para isso, usaremos o **Winston** em conjunto com o **Morgan** (que intercepta os logs das requisições HTTP).
+[← Anterior](05-autenticacao-com-jwt.md) · [Índice](../README.md) · **Etapa 6 de 11** · [Próxima →](07-seguranca-e-rate-limit.md)
 
-## 2️⃣5️⃣ Configurando o Winston (O Gerador de Logs)
+## Resultado desta etapa
 
-O Winston é altamente personalizável. Vamos criar um "logger" que imprime as mensagens no terminal com cores diferentes e salva os avisos e erros em arquivos de texto reais.
+Logs legíveis no terminal e JSON em arquivos, sem remover cookies, CORS, rotas ou tratamento de erros.
 
-Crie a pasta `src/config/` e adicione o arquivo `logger.ts`:
+## 1. Criar o logger
 
+<!-- file: src/config/logger.ts -->
 ```typescript
-// src/config/logger.ts
 import winston from 'winston';
+import { env } from './env.js';
 
-const levels = {
-  error: 0,
-  warn: 1,
-  info: 2,
-  http: 3,
-  debug: 4,
-};
-
-const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'white',
-};
-
-winston.addColors(colors);
-
-// Formatação visual do log (Data + Nível + Mensagem)
-const format = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
-  ),
-);
-
-// Define onde os logs serão guardados
-const transports = [
-  new winston.transports.Console(), // Imprime no terminal
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-  }), // Guarda apenas os erros graves neste arquivo
-  new winston.transports.File({ filename: 'logs/all.log' }), // Guarda todos os logs aqui
-];
+const levels = { error: 0, warn: 1, info: 2, http: 3, debug: 4 };
+winston.addColors({ error: 'red', warn: 'yellow', info: 'green', http: 'magenta', debug: 'white' });
 
 export const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'warn',
   levels,
-  format,
-  transports,
+  level: env.NODE_ENV === 'production' ? 'http' : 'debug',
+  silent: env.NODE_ENV === 'test',
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  transports: env.NODE_ENV === 'test' ? [] : [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`),
+      ),
+    }),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error', maxsize: 5242880, maxFiles: 3 }),
+    new winston.transports.File({ filename: 'logs/all.log', maxsize: 5242880, maxFiles: 3 }),
+  ],
 });
 ```
 
-## 2️⃣6️⃣ Configurando o Morgan (O Espião HTTP)
+O nível inclui `http` também em produção. O ambiente da etapa 1 tem padrão `development`; não dependemos de uma variável ausente para decidir se os logs aparecem. Cores ficam apenas no console; os arquivos preservam JSON. A rotação limita o crescimento local, mas não substitui uma política de retenção em produção.
 
-O Morgan é um middleware que vigia todas as requisições HTTP que chegam no seu servidor. Nós vamos configurá-lo para encaminhar essas informações diretamente para o nosso Winston, assim tudo fica centralizado.
+## 2. Criar middleware de logs HTTP
 
-Crie o arquivo `src/middlewares/morgan.middleware.ts`:
-
+<!-- file: src/middlewares/morgan.middleware.ts -->
 ```typescript
-// src/middlewares/morgan.middleware.ts
-import morgan, { StreamOptions } from 'morgan';
-import { logger } from '../config/logger';
+import morgan from 'morgan';
+import { logger } from '../config/logger.js';
 
-// Substitui a saída padrão do Morgan pelo "logger.http" do nosso Winston
-const stream: StreamOptions = {
-  write: (message) => logger.http(message.trim()),
-};
-
+morgan.token('safe-path', req => (req.url ?? '/').split('?')[0]);
 export const morganMiddleware = morgan(
-  ':method :url :status :res[content-length] - :response-time ms',
-  { stream }
+  ':method :safe-path :status :response-time ms',
+  { stream: { write: message => logger.http(message.trim()) } },
 );
 ```
 
-## 2️⃣7️⃣ Acoplando Tudo no Servidor Principal
+Registramos método, caminho sem query string, status e duração. Não registre corpo, senha, JWT, cookies ou cabeçalho Authorization.
 
-Agora vamos habilitar o Morgan para escutar todas as requisições globais da aplicação, e aproveitar para substituir o velho `console.log`.
+## 3. Substituir o middleware central de erros
 
-Abra o arquivo `src/server.ts` e atualize a importação e configuração:
-
+<!-- file: src/middlewares/error.middleware.ts -->
 ```typescript
-// src/server.ts
-import express from 'express';
-import routes from './routes/index';
-import { logger } from './config/logger'; // 👈 IMPORTANDO O WINSTON
-import { morganMiddleware } from './middlewares/morgan.middleware'; // 👈 IMPORTANDO O MORGAN
+import type { ErrorRequestHandler } from 'express';
+import { HttpError } from '../lib/http-error.js';
+import { logger } from '../config/logger.js';
 
-const app = express();
-const port = 3000;
-
-app.use(express.json());
-app.use(morganMiddleware); // 👈 LIGANDO O ESPIÃO DE REQUISIÇÕES (Sempre antes das rotas)
-app.use(routes);
-
-app.listen(port, () => {
-  logger.info(`🚀 Servidor rodando na porta ${port}`); // 👈 Dando adeus ao console.log
-});
+export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error instanceof HttpError) {
+    res.status(error.status).json({ error: error.message });
+    return;
+  }
+  if (typeof error === 'object' && error !== null && 'sqlState' in error && error.sqlState === '23505') {
+    res.status(409).json({ error: 'Este e-mail já está em uso.' });
+    return;
+  }
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    if (error.status === 400) {
+      res.status(400).json({ error: 'JSON inválido.' });
+      return;
+    }
+    if (error.status === 413) {
+      res.status(413).json({ error: 'Corpo da requisição muito grande.' });
+      return;
+    }
+  }
+  logger.error('Erro interno na API.', {
+    errorType: error instanceof Error ? error.name : 'unknown',
+    sqlState: typeof error === 'object' && error !== null && 'sqlState' in error ? error.sqlState : undefined,
+  });
+  res.status(500).json({ error: 'Erro interno do servidor.' });
+};
 ```
 
-> [!TIP]  
-> **A nova forma de printar no código!**  
-> A partir de agora, utilize `logger.info()`, `logger.warn()` ou `logger.error()` em qualquer lugar do seu projeto (inclusive nos seus Controllers). Além de deixar o terminal bonito e colorido, tudo ficará devidamente salvo na pasta `logs/` para análises futuras.
+Os logs também evitam despejar exceções inteiras que possam carregar SQL, parâmetros ou credenciais. Erros operacionais esperados, como 404 e 409, continuam respondendo com seus próprios status.
 
----
-➡️ *Vamos blindar as portas do servidor? Siga para a Parte 7:* [07-seguranca-e-rate-limit.md](./07-seguranca-e-rate-limit.md)
+## 4. Substituir a aplicação e o servidor
+
+<!-- file: src/app.ts -->
+```typescript
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import routes from './routes/index.js';
+import { corsMiddleware } from './middlewares/cors.middleware.js';
+import { morganMiddleware } from './middlewares/morgan.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
+
+export const app = express();
+app.use(morganMiddleware);
+app.use(corsMiddleware);
+app.use(cookieParser());
+app.use(express.json({ limit: '16kb' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use(routes);
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+app.use(errorHandler);
+```
+
+<!-- file: src/server.ts -->
+```typescript
+import { app } from './app.js';
+import { env } from './config/env.js';
+import { logger } from './config/logger.js';
+import { db } from './prisma/db.js';
+
+const server = app.listen(env.PORT, () => {
+  logger.info(`API disponível em http://localhost:${env.PORT}`);
+});
+const shutdown = () => {
+  server.close(() => {
+    void db.close().then(() => {
+      logger.info('Servidor encerrado.');
+      process.exit(0);
+    }).catch(() => process.exit(1));
+  });
+};
+process.once('SIGINT', shutdown);
+process.once('SIGTERM', shutdown);
+```
+
+## 5. Conferir os registros
+
+```bat
+npm run typecheck
+npm run dev
+```
+
+Em outro terminal:
+
+```bat
+curl.exe -i http://localhost:3000/health
+curl.exe -i http://localhost:3000/rota-inexistente
+```
+
+Espere 200 e 404. Veja as entradas HTTP no console e em `logs/all.log`. Esses acessos **não** devem gerar um erro em `logs/error.log`; o arquivo de erros pode permanecer vazio. Confira que login e cookie continuam funcionando após a substituição de `app.ts`.
+
+## Conferência antes de avançar
+
+- [ ] Log de inicialização visível.
+- [ ] Acessos 200 e 404 registrados em `all.log`.
+- [ ] Arquivos sem códigos de cor e sem tokens/senhas.
+- [ ] CORS e cookies preservados.
+- [ ] Pasta `logs/` ignorada pelo Git.
+
+Referências: [Winston](https://github.com/winstonjs/winston) · [Morgan](https://expressjs.com/en/resources/middleware/morgan.html).
+
+[← Anterior](05-autenticacao-com-jwt.md) · [07 · Segurança e limites →](07-seguranca-e-rate-limit.md)

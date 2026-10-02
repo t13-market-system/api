@@ -1,152 +1,266 @@
-# 🛠️ Preparação do Ambiente
+# 01 · Preparação do ambiente
 
-> [!NOTE]  
-> Este guia pressupõe que você já tenha o Node.js instalado. Vamos configurar uma API moderna usando Express e a versão mais recente do Prisma (Prisma 8).
+[← Índice](../README.md) · **Etapa 1 de 11** · [Próxima →](02-modelagem-e-sincronizacao-com-prisma.md)
 
-## 1️⃣ Criação do `package.json`
+> [!IMPORTANT]
+> Execute o tutorial em uma pasta **nova**, chamada `api`, com um banco de desenvolvimento vazio. O código atual deste repositório não é automaticamente atualizado por estes capítulos. Não copie migrações antigas para o projeto novo.
 
-O arquivo `package.json` é o coração do seu projeto Node.js, responsável por gerenciar todas as dependências e scripts.
+## Resultado desta etapa
 
-> [!IMPORTANT]  
-> Abra o **Prompt de Comando (CMD)** sem acesso de administrador na pasta raiz do seu projeto e execute o comando abaixo (a flag `-y` pula as perguntas e preenche tudo com o padrão):
+Uma aplicação Express em TypeScript com `/health`, configuração de ambiente validada e scripts de desenvolvimento e produção.
 
-```bash
+## 1. Conferir os requisitos
+
+Se já existe uma pasta `api`, escolha outra pasta vazia ou outro diretório pai para este exercício; não sobrescreva sua tentativa anterior.
+
+| Requisito | Versão adotada | Conferência |
+|---|---|---|
+| Node.js | 24.15.0 ou versão posterior compatível | `node --version` |
+| npm | 11 | `npm --version` |
+| PostgreSQL | 15 ou superior, local ou Neon | `SELECT version();` no editor SQL |
+| Terminal | CMD no Windows | Abra na pasta que conterá `api` |
+
+Os blocos `bat` usam **CMD**. No PowerShell, use `npm.cmd` e `npx.cmd` se a política de execução bloquear os arquivos `.ps1`; não é necessário mudar essa política.
+
+```bat
+mkdir api
+cd api
 npm init -y
+npm pkg set type=module
+npm pkg set private=true --json
 ```
 
-## 2️⃣ Instalação das Dependências (Produção)
+> [!NOTE]
+> Este guia usa versões candidatas do Prisma 8: CLI `8.0.0-rc.15` e ORM PostgreSQL `8.0.0-rc.11`. Essa combinação corresponde ao toolchain da CLI. Números diferentes entre CLI e ORM não significam, por si só, incompatibilidade. Não troque por `latest` no meio do tutorial.
 
-Agora vamos instalar o "motor" da nossa aplicação. Estas são as bibliotecas que rodarão no servidor final:
+## 2. Instalar dependências de execução
 
-```bash
-npm install express pg @prisma/client bcrypt jsonwebtoken zod helmet cors express-rate-limit morgan winston temporal-polyfill
+```bat
+npm install --save-exact express@5.2.1 @prisma/orm-postgres@8.0.0-rc.11 dotenv@18.0.5 bcrypt@6.0.0 jsonwebtoken@9.0.3 zod@4.6.5 helmet@8.3.0 cors@2.8.6 express-rate-limit@8.7.0 cookie-parser@1.4.7 morgan@1.12.1 winston@3.19.0
 ```
 
-**O que estamos instalando?**
-- 🗄️ **Core & BD**: `express` (rotas), `@prisma/client` e `pg` (comunicação com PostgreSQL).
-- 🛡️ **Segurança**: `helmet`, `cors` e `express-rate-limit`.
-- 🔐 **Autenticação**: `bcrypt` (criptografia) e `jsonwebtoken` (tokens).
-- 📝 **Validação & Logs**: `zod`, `morgan`, `winston` e `temporal-polyfill`.
+| Pacotes | Função |
+|---|---|
+| `express` | HTTP, rotas e tratamento de erros assíncronos do Express 5 |
+| `@prisma/orm-postgres`, `dotenv` | Banco e carregamento do `.env`; necessários também em produção |
+| `bcrypt`, `jsonwebtoken`, `cookie-parser` | Hash de senha, JWT e leitura de cookies |
+| `zod` | Validação e normalização das entradas |
+| `helmet`, `cors`, `express-rate-limit` | Cabeçalhos, política de origem e limites de requisições |
+| `morgan`, `winston` | Logs HTTP e logs da aplicação |
 
-## 3️⃣ Instalação das Dependências (Desenvolvimento)
+Não instalamos `@prisma/client`: este tutorial usa a API do Prisma 8 em `@prisma/orm-postgres/runtime`. O driver PostgreSQL já acompanha o pacote; não há import direto de `pg` na aplicação.
 
-Como estamos usando TypeScript, precisamos instalar suas tipagens (`@types/*`) e ferramentas para rodar o código localmente.
+## 3. Instalar ferramentas de desenvolvimento
 
-```bash
-npm install -D prisma@8.0.0-rc.15 typescript @types/node @types/express @types/bcrypt @types/jsonwebtoken @types/cors @types/morgan tsx @prisma/orm-postgres@8.0.0-rc.11 dotenv
+```bat
+npm install -D --save-exact prisma@8.0.0-rc.15 @prisma/cli-engine@0.4.0 typescript@5.9.3 tsx@4.23.15 @types/node@26.6.4 @types/express@5.0.6 @types/bcrypt@6.0.0 @types/jsonwebtoken@9.0.10 @types/cors@2.8.19 @types/cookie-parser@1.4.10 @types/morgan@1.9.10
+npm ls --depth=0
 ```
 
-## 4️⃣ Configuração do TypeScript
+`@prisma/cli-engine@0.4.0` é a dependência declarada pela CLI escolhida. Versione `package.json` e `package-lock.json`; nos clones seguintes use `npm ci`.
 
-O TypeScript precisa de um "manual de instruções". Vamos criar o arquivo `tsconfig.json`:
+## 4. Inicializar o Prisma uma única vez
 
-```bash
-npx tsc --init
+```bat
+npx prisma orm init --yes --target postgres --authoring psl --schema-path src/prisma/contract.prisma --write-env --skip-install
 ```
 
-Após criar o arquivo, substitua todo o conteúdo dele por esta configuração moderna e otimizada:
+O caminho e a criação do `.env` estão explícitos. `--skip-install` evita uma instalação automática com versões diferentes e **não emite o contrato**. Faremos a emissão após definir o modelo no capítulo 2.
 
+| Arquivo criado | Uso |
+|---|---|
+| `src/prisma/contract.prisma` | Fonte do modelo, inicialmente com exemplos `User` e `Post` |
+| `src/prisma/db.ts` | Cliente gerado; será substituído no capítulo 2 |
+| `prisma.config.ts` | Configuração da CLI; será substituída no capítulo 2 |
+| `prisma-8.md` | Referência gerada pela versão instalada |
+| `.env.example`, `.env` | Modelo de ambiente e configuração local |
+
+> [!CAUTION]
+> Não execute `orm init` novamente para corrigir um detalhe. Ele pode substituir arquivos. Se a pasta já foi inicializada, siga editando os arquivos indicados. Para repetir o tutorial, crie outra pasta vazia. `--yes` não concede autorização para sobrescrever arquivos existentes.
+
+## 5. Configurar TypeScript **depois** da inicialização
+
+A CLI pode modificar `tsconfig.json` e `package.json`. Por isso, reforce o modo ESM e substitua o `tsconfig.json` agora. Não execute `tsc --init` sobre o arquivo já criado.
+
+```bat
+npm pkg set type=module
+```
+
+**Substitua todo o conteúdo de `tsconfig.json`:**
+
+<!-- file: tsconfig.json -->
 ```json
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "rootDir": "./src",
-    "outDir": "./dist",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmitOnError": true
   },
-  "include": ["src/**/*", "prisma/**/*"]
+  "include": ["src/**/*.ts", "src/**/*.json"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
-```
-
-## 5️⃣ Inicializar o Prisma 8
-
-Agora, vamos preparar a fundação do nosso banco de dados utilizando a nova CLI do Prisma 8 (Prisma Next).
-
-```bash
-npx prisma orm init --target postgres --skip-install
-npx prisma contract emit
 ```
 
 > [!TIP]
-> **Interatividade no Terminal:**
-> Ao rodar o comando acima, a CLI do Prisma 8 poderá fazer algumas perguntas para configurar o ambiente. Se isso acontecer, escolha as seguintes opções:
-> 1. **"Which authoring style would you like to use?"** → Escolha **Prisma Schema Language (PSL)**.
-> 2. **"Where do you want to place your schema file?"** → Se perguntar, escolha ou digite **`prisma/contract.prisma`**.
-> 3. **"Do you want to write a .env file?"** → Escolha **Yes**.
-> *(Dica ninja: Para rodar sem perguntas e criar tudo magicamente no local certo, use os comandos: `npx prisma orm init --yes --target postgres --authoring psl --schema-path prisma/contract.prisma --skip-install` seguido de `npx prisma contract emit`)*
+> Imports entre arquivos do projeto terminam em **`.js`**, mesmo dentro de `.ts`. O TypeScript encontra a fonte `.ts` e preserva o caminho correto para o Node em produção. JSON usa `with { type: 'json' }`. `tsx` também aceita esses imports.
 
-> [!WARNING]  
-> **Atenção: Erro `CLI.CONSENT_REQUIRED` (Re-inicialização)**
-> Se ao executar o comando acima você receber a mensagem `[CLI.CONSENT_REQUIRED] "Re-initializing replaces prisma.config.ts..."`, isso significa que os arquivos de configuração **já existem** na pasta (porque uma tentativa anterior rodou até a metade).
-> **Como resolver:** Se quiser inicializar do zero, você precisa apagar manualmente o arquivo `prisma.config.ts`, `prisma-8.md` e a pasta `prisma/` antes de rodar o comando novamente. Alternativamente, você pode rodar a versão interativa `npx prisma orm init --target postgres --skip-install`, e quando ele pedir confirmação ("Grant it by passing --confirm..."), basta digitar o nome da sua pasta para autorizar a sobrescrita.
+## 6. Preparar ambiente e Git
 
-> [!TIP]  
-> **O que acabou de ser gerado?**
-> - **Pasta `prisma/` com `contract.prisma`:** No Prisma 8, este arquivo é o coração do seu banco.
-> - **Arquivos `contract.d.ts` e `contract.json`:** Gerados automaticamente dentro da pasta `prisma/`, são essenciais para que o TypeScript funcione corretamente com os modelos. Se eles não foram gerados ou deram erro, certifique-se de que os pacotes do passo 3 foram instalados e rode `npx prisma contract emit`.
-> - **Arquivo `prisma.config.ts` na raiz:** Configuração principal do Prisma.
-> - **Arquivo `.env` na raiz:** Arquivo de variáveis de ambiente.
+Gere uma chave local e copie a saída para `JWT_SECRET`:
 
-> [!WARNING]  
-> **Segurança:** O arquivo `.env` (ou `.env.example`) guarda credenciais sensíveis (como a URL do banco). O `.env` **NUNCA** deve ser enviado para o GitHub! Certifique-se de que a palavra `.env` está listada no seu `.gitignore`.
+```bat
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
 
-## 6️⃣ Scripts de Execução
+Substitua `.env.example` por este modelo, sem credenciais reais:
 
-Para facilitar, vamos criar "atalhos" no `package.json`. Substitua a seção `"scripts"` pelo código abaixo:
+<!-- file: .env.example -->
+```dotenv
+NODE_ENV=development
+PORT=3000
+FRONTEND_ORIGIN=http://localhost:5173
+API_ORIGIN=http://localhost:3000
+DATABASE_URL=postgresql://USUARIO:SENHA@HOST:5432/BANCO?sslmode=require
+DIRECT_URL=
+JWT_SECRET=SUBSTITUA_POR_UMA_CHAVE_ALEATORIA_DE_PELO_MENOS_32_CARACTERES
+```
 
+Edite **`.env`** com a URL real do seu banco de desenvolvimento e a chave gerada. No Neon, obtenha a URL no painel **Connect**. Preserve os parâmetros fornecidos pelo provedor. `DIRECT_URL`, opcional, recebe a conexão sem pool usada pela CLI; `DATABASE_URL` é usada pela aplicação. Se o banco for local, use seus próprios parâmetros de conexão e TLS.
+
+Crie ou complete `.gitignore`:
+
+<!-- file: .gitignore -->
+```gitignore
+node_modules/
+dist/
+coverage/
+logs/
+cookies.txt
+.env
+.env.*
+!.env.example
+```
+
+Versione o `.env.example` com placeholders, os contratos gerados e a pasta `migrations/`. Nunca preencha o exemplo público com segredos reais.
+
+Crie `src/config/env.ts`:
+
+<!-- file: src/config/env.ts -->
+```typescript
+import 'dotenv/config';
+import { z } from 'zod';
+
+const origin = z.url().refine(value => {
+  const url = new URL(value);
+  return ['http:', 'https:'].includes(url.protocol) && url.origin === value;
+}, 'Use uma origem HTTP(S), sem caminho nem barra final.');
+
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  FRONTEND_ORIGIN: origin.default('http://localhost:5173'),
+  API_ORIGIN: origin.default('http://localhost:3000'),
+  DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, 'Use uma URL PostgreSQL.').pipe(z.url()),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET precisa ter pelo menos 32 caracteres.'),
+});
+
+const result = schema.safeParse(process.env);
+if (!result.success) {
+  throw new Error(`Ambiente inválido: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
+}
+export const env = result.data;
+```
+
+## 7. Adicionar scripts
+
+Preserve as dependências e os demais campos de `package.json`. Substitua apenas o objeto `scripts` pelos pares abaixo; o bloco é o **valor desse objeto**, não um `package.json` inteiro.
+
+<!-- scripts -->
 ```json
-"scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "postinstall": "prisma skills sync || exit 0",
+{
   "dev": "tsx watch src/server.ts",
+  "typecheck": "tsc --noEmit",
   "build": "tsc",
-  "start": "node dist/server.js"
+  "start": "node dist/server.js",
+  "contract:emit": "prisma contract emit",
+  "skills:sync": "prisma skills sync"
 }
 ```
 
-- 🟢 **`npm run dev`**: O seu melhor amigo! Usa o `tsx watch` para rodar e reiniciar o servidor automaticamente a cada salvamento (Hot-Reload).
-- 🛠️ **`npm run build`**: Traduz todo o TypeScript (`.ts`) para JavaScript (`.js`) na pasta `dist/`.
-- 🚀 **`npm start`**: Executa o código final de produção.
+O comando `test` será criado com testes de verdade no capítulo 9. A sincronização de skills é explícita, sem esconder erros em `postinstall`.
 
-## 7️⃣ Criando o Ponto de Entrada (`server.ts`)
+## 8. Criar a aplicação inicial
 
-Crie uma pasta chamada `src/` na raiz do projeto, e dentro dela o arquivo `server.ts`:
+Crie `src/app.ts`:
 
+<!-- file: src/app.ts -->
 ```typescript
-// src/server.ts
 import express from 'express';
 
-const app = express();
-const port = 3000;
+export const app = express();
+app.use(express.json({ limit: '16kb' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+```
 
-app.use(express.json());
+Crie `src/server.ts`:
 
-app.listen(port, () => {
-  console.log(`🚀 Servidor rodando na porta ${port}`);
+<!-- file: src/server.ts -->
+```typescript
+import { app } from './app.js';
+import { env } from './config/env.js';
+
+app.listen(env.PORT, () => {
+  console.log(`API disponível em http://localhost:${env.PORT}`);
 });
 ```
 
-> [!TIP]  
-> **Hora de testar!** No CMD, digite `npm run dev`. Se aparecer *"🚀 Servidor rodando na porta 3000"*, sua API está viva! 🎉
+Inicie em um terminal e mantenha-o aberto:
 
-## 8️⃣ Variáveis de Ambiente (`.env`)
-
-Abra (ou crie) o arquivo `.env` na raiz e configure suas credenciais:
-
-```env
-DATABASE_URL="sua_url_de_conexao_do_postgresql_neon_aqui"
-JWT_SECRET="sua_chave_secreta_para_os_tokens_aqui"
+```bat
+npm run dev
 ```
 
-> [!NOTE]  
-> - **DATABASE_URL**: Obtenha no dashboard do Neon Postgres.
-> - **JWT_SECRET**: Use uma string aleatória forte (Ex: `@1093b^2&Fh#j*zU`).
+Em **outro CMD**, na mesma pasta:
 
----
-➡️ *Tudo pronto! Siga para a Parte 2:* [02-modelagem-e-sincronizacao-com-prisma.md](./02-modelagem-e-sincronizacao-com-prisma.md)
+```bat
+curl.exe -i http://localhost:3000/health
+```
+
+Resultado esperado: HTTP **200** e `{"status":"ok"}`. Se escolheu outra porta, ajuste a URL e `API_ORIGIN` no `.env`. Uma resposta 404 em `/` é normal: não criamos essa rota.
+
+> [!IMPORTANT]
+> A inicialização também criou `src/prisma/db.ts`, que depende do contrato ainda não emitido. Por isso, a primeira verificação de `typecheck` e `build` ocorrerá **no capítulo 2**, após substituir os exemplos e emitir o contrato. Não interprete essa etapa intermediária como configuração final.
+
+<details>
+<summary>Diagnóstico de erros desta etapa</summary>
+
+| Sintoma | Ação |
+|---|---|
+| `npm` não encontrado | Corrija a instalação/PATH do Node e reabra o terminal |
+| `EADDRINUSE` | Pare o servidor anterior com Ctrl+C ou escolha outra `PORT` |
+| Ambiente inválido | Corrija os campos indicados no `.env` |
+| `CLI.CONSENT_REQUIRED` | A pasta não está vazia; não reinicialize o projeto existente |
+| Skills desatualizadas | No capítulo 2 execute `npm run skills:sync`; isso não cria tabelas |
+
+</details>
+
+## Conferência antes de avançar
+
+- [ ] Node e npm conferidos; instalação concluída sem erro.
+- [ ] `package.json` declara `"type": "module"`.
+- [ ] Schema em `src/prisma/contract.prisma`.
+- [ ] `.env` configurado e ignorado pelo Git.
+- [ ] `/health` responde 200.
+
+Referências: [inicialização do Prisma](https://www.prisma.io/docs/cli/orm-init) · [ES Modules no Node](https://nodejs.org/api/esm.html) · [NodeNext no TypeScript](https://www.typescriptlang.org/tsconfig/moduleResolution.html).
+
+[← Índice](../README.md) · [02 · Banco e contrato →](02-modelagem-e-sincronizacao-com-prisma.md)

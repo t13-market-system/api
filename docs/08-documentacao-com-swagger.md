@@ -1,145 +1,326 @@
-# 📖 Documentação Interativa com Swagger
+# 08 · Documentação interativa com Swagger
 
-> [!NOTE]  
-> Uma API não está 100% pronta até que os outros desenvolvedores (ou o time de Frontend) saibam como usá-la! O **Swagger** permite criar uma interface gráfica maravilhosa e interativa, onde qualquer pessoa pode ler a documentação das rotas, ver os formatos esperados e testá-las diretamente pelo navegador, sem precisar abrir ferramentas complexas como o Postman.
+[← Anterior](07-seguranca-e-rate-limit.md) · [Índice](../README.md) · **Etapa 8 de 11** · [Próxima →](09-testes-automatizados-vitest.md)
 
-## 3️⃣0️⃣ Instalando as Bibliotecas do Swagger
+## Resultado desta etapa
 
-Para gerar essa interface dinâmica a partir do nosso próprio código, precisaremos instalar as bibliotecas base e suas respectivas tipagens para TypeScript. 
+OpenAPI com cadastro, login, logout e todas as operações de usuários; Swagger disponível no código TypeScript e no JavaScript compilado.
 
-No seu terminal (dentro da pasta do projeto), rode:
+## 1. Instalar pacotes fixados
 
-```bash
-npm install swagger-ui-express swagger-jsdoc
-npm install -D @types/swagger-ui-express @types/swagger-jsdoc
+```bat
+npm install --save-exact swagger-jsdoc@6.3.0 swagger-ui-express@5.0.1
+npm install -D --save-exact @types/swagger-jsdoc@6.0.4 @types/swagger-ui-express@4.1.8
 ```
 
-## 3️⃣1️⃣ Configuração Principal do Swagger
+## 2. Criar a configuração
 
-Nesta etapa, nós criamos as "instruções" para o Swagger, definindo o título da nossa documentação, a versão e os métodos de segurança (para suportar o nosso botão de "cadeado" do JWT Token).
-
-Crie a pasta `src/config/` (se não existir) e adicione o arquivo `swagger.ts`:
-
+<!-- file: src/config/swagger.ts -->
 ```typescript
-// src/config/swagger.ts
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { Express } from 'express';
+import type { Express } from 'express';
+import { fileURLToPath } from 'node:url';
+import { env } from './env.js';
 
-const options: swaggerJsdoc.Options = {
+const extension = import.meta.url.endsWith('.ts') ? '.ts' : '.js';
+const routeGlob = fileURLToPath(new URL(`../routes/*${extension}`, import.meta.url)).replace(/\\/g, '/');
+
+export const swaggerSpec = swaggerJsdoc({
+  failOnErrors: true,
   definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Minha API Profissional (Node + Prisma 8)',
-      version: '1.0.0',
-      description: 'Documentação oficial e interativa da nossa API RESTful.',
-    },
-    servers: [
-      {
-        url: 'http://localhost:3000',
-        description: 'Servidor Local de Desenvolvimento',
-      },
-    ],
+    openapi: '3.0.3',
+    info: { title: 'API Express e Prisma 8', version: '1.0.0' },
+    servers: [{ url: env.API_ORIGIN }],
     components: {
-      // Configuração para permitir inserir o Bearer Token pelo botão "Authorize"
       securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
+        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       },
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    security: [{ bearerAuth: [] }],
   },
-  // O Swagger vai varrer todos os arquivos ".ts" dentro de "routes/" buscando os nossos comentários
-  apis: ['./src/routes/*.ts'], 
-};
-
-const swaggerSpec = swaggerJsdoc(options);
+  apis: [routeGlob],
+});
 
 export const setupSwagger = (app: Express) => {
-  // Cria a rota /api-docs que renderiza a tela gráfica do Swagger
+  app.get('/api-docs.json', (_req, res) => res.json(swaggerSpec));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 };
 ```
 
-## 3️⃣2️⃣ Acoplando o Swagger no Servidor
+A busca usa o diretório do módulo, não o diretório de trabalho do terminal. Ao compilar, busca `.js` em `dist/routes`; em desenvolvimento, busca `.ts` em `src/routes`. Mantenha os comentários no build; não configure `removeComments: true`.
 
-Agora que o módulo está configurado, precisamos injetá-lo no fluxo principal da aplicação.
+## 3. Substituir o arquivo de rotas de usuários com a documentação
 
-Abra `src/server.ts` e atualize:
+O código dos handlers é preservado. O comentário abaixo descreve todas as operações e suas regras.
 
+<!-- file: src/routes/user.route.ts -->
 ```typescript
-// src/server.ts
-import express from 'express';
-// ... (outros imports de segurança e rotas)
-import { setupSwagger } from './config/swagger'; // 👈 IMPORTANDO O MÓDULO DO SWAGGER
-
-const app = express();
-const port = 3000;
-
-// ... (configurações do Helmet, CORS, Limiters, app.use(routes))
-
-// 📖 Inicia a documentação gráfica
-setupSwagger(app);
-
-app.listen(port, () => {
-  logger.info(`🚀 Servidor rodando na porta ${port}`);
-  logger.info(`📖 Documentação disponível em http://localhost:${port}/api-docs`); // 👈 NOVO AVISO
-});
-```
-
-## 3️⃣3️⃣ Comentando as Rotas (A Mágica Final)
-
-Como o Swagger sabe quais são as nossas rotas, quais campos elas exigem e o que retornam? Simples: Nós escrevemos comentários especiais no formato **JSDoc (YAML)** logo acima de cada endpoint. O Swagger lê isso e desenha os formulários visuais sozinho!
-
-Vá no seu arquivo `src/routes/auth.route.ts` e cole este bloco de comentário logo acima da rota de login:
-
-```typescript
-// src/routes/auth.route.ts
-
-// ... imports e const app ...
+import { Router } from 'express';
+import { UserController } from '../controllers/user.controller.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { createUserSchema, updateUserSchema, userIdSchema } from '../schemas/user.schema.js';
+import { authMiddleware, requireSelf } from '../middlewares/auth.middleware.js';
 
 /**
- * @swagger
+ * @openapi
+ * components:
+ *   schemas:
+ *     PublicUser:
+ *       type: object
+ *       properties:
+ *         id: { type: integer, minimum: 1 }
+ *         email: { type: string, format: email }
+ *         name: { type: string, nullable: true }
+ *         createdAt: { type: string, format: date-time }
+ *     CreateUser:
+ *       type: object
+ *       additionalProperties: false
+ *       required: [email, password]
+ *       properties:
+ *         email: { type: string, format: email, maxLength: 254 }
+ *         name: { type: string, minLength: 2, maxLength: 100 }
+ *         password:
+ *           type: string
+ *           format: password
+ *           minLength: 8
+ *           description: Máximo de 72 bytes em UTF-8.
+ *     UpdateUser:
+ *       type: object
+ *       additionalProperties: false
+ *       minProperties: 1
+ *       properties:
+ *         email: { type: string, format: email, maxLength: 254 }
+ *         name: { type: string, minLength: 2, maxLength: 100 }
+ *         password:
+ *           type: string
+ *           format: password
+ *           minLength: 8
+ *           description: Máximo de 72 bytes em UTF-8.
+ * /users:
+ *   post:
+ *     summary: Cadastrar uma conta
+ *     tags: [Usuários]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/CreateUser' }
+ *     responses:
+ *       '201':
+ *         description: Conta criada sem hash de senha na resposta.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/PublicUser' }
+ *       '400': { description: Dados inválidos. }
+ *       '409': { description: E-mail já utilizado. }
+ *       '429': { description: Limite de requisições. }
+ *   get:
+ *     summary: Listar somente a própria conta
+ *     tags: [Usuários]
+ *     responses:
+ *       '200':
+ *         description: Lista com a própria conta.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items: { $ref: '#/components/schemas/PublicUser' }
+ *       '401': { description: Token ausente ou inválido. }
+ * /users/{id}:
+ *   parameters:
+ *     - in: path
+ *       name: id
+ *       required: true
+ *       schema: { type: integer, minimum: 1, maximum: 2147483647 }
+ *       description: ID da própria conta.
+ *   get:
+ *     summary: Consultar a própria conta
+ *     tags: [Usuários]
+ *     responses:
+ *       '200':
+ *         description: Conta encontrada.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/PublicUser' }
+ *       '400': { description: ID inválido. }
+ *       '401': { description: Token ausente ou inválido. }
+ *       '403': { description: Conta de outro usuário. }
+ *       '404': { description: Conta inexistente. }
+ *   put:
+ *     summary: Atualizar campos da própria conta
+ *     tags: [Usuários]
+ *     description: Somente os campos enviados são alterados; corpo vazio é rejeitado.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { $ref: '#/components/schemas/UpdateUser' }
+ *     responses:
+ *       '200':
+ *         description: Conta atualizada.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/PublicUser' }
+ *       '400': { description: Dados inválidos. }
+ *       '401': { description: Token ausente ou inválido. }
+ *       '403': { description: Conta alheia ou origem de cookie não permitida. }
+ *       '404': { description: Conta inexistente. }
+ *       '409': { description: E-mail já utilizado. }
+ *   delete:
+ *     summary: Excluir a própria conta
+ *     tags: [Usuários]
+ *     responses:
+ *       '204': { description: Conta excluída, sem corpo. }
+ *       '400': { description: ID inválido. }
+ *       '401': { description: Token ausente ou inválido. }
+ *       '403': { description: Conta alheia ou origem de cookie não permitida. }
+ *       '404': { description: Conta inexistente. }
+ */
+const router = Router();
+router.post('/users', validate(createUserSchema), UserController.createUser);
+router.get('/users', authMiddleware, UserController.getAllUsers);
+router.get('/users/:id', authMiddleware, validate(userIdSchema), requireSelf, UserController.getUserById);
+router.put('/users/:id', authMiddleware, validate(updateUserSchema), requireSelf, UserController.updateUser);
+router.delete('/users/:id', authMiddleware, validate(userIdSchema), requireSelf, UserController.deleteUser);
+export default router;
+```
+
+## 4. Substituir as rotas de autenticação com a documentação
+
+<!-- file: src/routes/auth.route.ts -->
+```typescript
+import { Router } from 'express';
+import { AuthController } from '../controllers/auth.controller.js';
+import { validate } from '../middlewares/validate.middleware.js';
+import { loginSchema } from '../schemas/auth.schema.js';
+
+/**
+ * @openapi
  * /login:
  *   post:
- *     summary: Autentica o usuário e retorna o Token JWT
+ *     summary: Autenticar e receber token e cookie HttpOnly
  *     tags: [Autenticação]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             additionalProperties: false
+ *             required: [email, password]
  *             properties:
- *               email:
- *                 type: string
- *                 example: usuario@email.com
- *               password:
- *                 type: string
- *                 example: 123456
+ *               email: { type: string, format: email }
+ *               password: { type: string, format: password }
  *     responses:
- *       200:
- *         description: Login bem sucedido (Retorna o Token)
- *       400:
- *         description: Erro de formatação dos dados (Zod)
- *       401:
- *         description: Credenciais inválidas
+ *       '200':
+ *         description: Token válido por 15 minutos; cookie HttpOnly enviado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token: { type: string }
+ *                 user: { $ref: '#/components/schemas/PublicUser' }
+ *       '400': { description: Dados inválidos. }
+ *       '401': { description: Credenciais inválidas. }
+ *       '429': { description: Excesso de tentativas. }
+ * /logout:
+ *   post:
+ *     summary: Limpar o cookie de autenticação
+ *     tags: [Autenticação]
+ *     security: []
+ *     description: Tokens Bearer já emitidos continuam válidos até expirar.
+ *     responses:
+ *       '204': { description: Cookie removido, sem corpo. }
  */
-app.post('/login', validate(loginSchema), AuthController.login);
+const router = Router();
+router.post('/login', validate(loginSchema), AuthController.login);
+router.post('/logout', AuthController.logout);
+export default router;
 ```
 
-> [!TIP]  
-> **A Mágica Aconteceu!** ✨  
-> Reinicie o seu servidor com o `npm run dev` e acesse no navegador: `http://localhost:3000/api-docs`. 
-> 
-> Você verá uma interface incrivelmente profissional. Se você clicar na rota `/login`, pode até clicar em **"Try it out"**, digitar seu e-mail e senha ali mesmo, e apertar Execute! Depois, basta copiar o token devolvido, clicar no botão verde gigante **"Authorize"** no topo da tela, colar o token, e você ganha passe livre (VIP) para testar as rotas privadas sem usar uma única linha de código.
+## 5. Substituir `src/app.ts` completo
 
----
-➡️ *Chegou a hora do "seguro de vida"! Siga para a Parte 9:* [09-testes-automatizados-vitest.md](./09-testes-automatizados-vitest.md)
+Swagger entra antes do handler 404 e do middleware de erros. Todos os middlewares anteriores continuam presentes.
+
+<!-- file: src/app.ts -->
+```typescript
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import routes from './routes/index.js';
+import { env } from './config/env.js';
+import { setupSwagger } from './config/swagger.js';
+import { corsMiddleware } from './middlewares/cors.middleware.js';
+import { morganMiddleware } from './middlewares/morgan.middleware.js';
+import { originGuard } from './middlewares/origin.middleware.js';
+import { limiter, loginLimiter } from './middlewares/rateLimit.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
+
+export const app = express();
+app.use(morganMiddleware);
+app.use(helmet({
+  contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : {
+    directives: { 'upgrade-insecure-requests': null },
+  },
+}));
+app.use(corsMiddleware);
+app.use(originGuard);
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.use(limiter);
+app.use('/login', loginLimiter);
+app.use(cookieParser());
+app.use(express.json({ limit: '16kb' }));
+app.use(routes);
+setupSwagger(app);
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+app.use(errorHandler);
+```
+
+## 6. Testar em desenvolvimento e após o build
+
+```bat
+npm run typecheck
+npm run dev
+```
+
+Abra [http://localhost:3000/api-docs](http://localhost:3000/api-docs). Em outro CMD:
+
+```bat
+curl.exe -i http://localhost:3000/api-docs.json
+```
+
+Confira os quatro caminhos `/users`, `/users/{id}`, `/login` e `/logout`. Para usar a interface:
+
+1. Cadastre uma conta em `POST /users`.
+2. Faça login em `POST /login`, sem token prévio.
+3. No botão **Authorize**, cole apenas o token, sem escrever `Bearer`.
+4. Consulte a própria conta e use seu ID nas operações seguintes.
+5. Confira que consultar outra conta devolve 403.
+
+Pare o servidor de desenvolvimento com Ctrl+C:
+
+```bat
+npm run build
+npm start
+```
+
+Confira novamente `/api-docs` e `/api-docs.json`; a documentação deve continuar presente no JavaScript compilado.
+
+> [!NOTE]
+> Este exercício expõe Swagger localmente. Antes de publicar uma API, decida se a interface e o documento OpenAPI serão públicos ou exigirão acesso. Configure `API_ORIGIN` para a URL externa real. HTTPS em produção também é necessário para os cookies `Secure`.
+
+## Conferência antes de avançar
+
+- [ ] Login e cadastro documentados sem exigir token.
+- [ ] Todas as operações de usuários aparecem, com permissão sobre a própria conta.
+- [ ] JWT funciona pelo botão Authorize.
+- [ ] OpenAPI e interface disponíveis após `build` e `start`.
+- [ ] Cookies, CORS, limites e logs preservados.
+
+Referências: [swagger-jsdoc](https://github.com/Surnet/swagger-jsdoc) · [swagger-ui-express](https://github.com/scottie1984/swagger-ui-express).
+
+[← Anterior](07-seguranca-e-rate-limit.md) · [09 · Testes automatizados →](09-testes-automatizados-vitest.md)
