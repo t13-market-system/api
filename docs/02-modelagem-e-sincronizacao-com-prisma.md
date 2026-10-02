@@ -82,6 +82,7 @@ Skills são instruções para agentes de programação. Não criam tabelas, não
 
 <!-- file: src/prisma/db.ts -->
 ```typescript
+import 'temporal-polyfill/full/global';
 import postgres from '@prisma/orm-postgres/runtime';
 import type { Contract } from './contract.js';
 import contractJson from './contract.json' with { type: 'json' };
@@ -95,6 +96,9 @@ export const db = postgres<Contract>({
 ```
 
 Todos os serviços importarão este módulo, compartilhando o cliente no mesmo processo. `tsx watch` reinicia o processo quando necessário; o cliente não precisa de um armazenamento global para sobreviver a processos diferentes. No capítulo 3 adicionaremos o fechamento das conexões ao encerrar o servidor.
+
+> [!IMPORTANT]
+> No Prisma 8, `DateTime` retorna `Temporal.Instant`, não `Date`. O Node.js 24 não oferece `Temporal` global: o primeiro import acima instala o suporte antes de qualquer consulta. O pacote foi incluído nas dependências de execução no capítulo 1 e deve permanecer instalado em produção. Sem ele, a migração e `/health` podem passar, mas o primeiro cadastro retorna 500 ao ler `createdAt`. Na resposta JSON, o instante é serializado como uma string de data e hora. Veja a [explicação oficial sobre DateTime e Temporal](https://www.prisma.io/docs/orm/coming-from-prisma-orm-7#schema).
 
 ## 5. Planejar, revisar e aplicar a primeira migração
 
@@ -169,6 +173,17 @@ npx prisma db verify
 
 Revise o contrato inferido e os modelos reais. `db sign` confirma a estrutura e registra o contrato existente; não substitui as tabelas pelo exemplo `User`. A inferência só será compatível com os serviços deste guia se o modelo tiver os campos exigidos aqui, inclusive o hash `password`. Para planejar mudanças depois da adoção, siga a documentação oficial de migrações e confira a referência `db`.
 
+Se você já possui um `contract.prisma` conferido com o banco, pode copiá-lo para `src/prisma/contract.prisma` **nesta alternativa**, em vez de executar `contract infer`. Emita e confira o contrato antes de assinar. Mantenha o import de Temporal também nesse caso: o requisito depende do tipo `DateTime`, não da criação das tabelas.
+
+| Contrato existente | Exemplo do tutorial | Consequência |
+|---|---|---|
+| `Cliente.idCliente` | `Cliente.id` | Adaptar filtros, parâmetros e retorno do serviço |
+| `Cliente.nomeCliente` | `Cliente.name` | Adaptar validação, corpo HTTP, templates e Swagger |
+| `Cliente.emailCliente`, opcional e sem `@unique` | `Cliente.email`, obrigatório e único | A regra de validação e a resposta 409 por duplicidade não são equivalentes |
+| Relação `Cliente.telClientes` → `TelCliente` | Sem telefones no exemplo | Definir rotas e regras de relação antes de acrescentar telefones |
+
+Esses são, por exemplo, os campos do contrato já existente em `api` neste ambiente. **Não substitua o contrato dessa base pelo contrato simplificado do capítulo 10**: isso pode propor remoção de tabelas e colunas. Para executar o tutorial literalmente, use outra pasta (`api2`, `api3` etc.) e um banco vazio separado. Para construir uma API sobre as tabelas existentes, adapte os serviços e o gerador aos nomes e às restrições reais; esse fluxo não é o exercício progressivo de banco vazio.
+
 </details>
 
 <details>
@@ -183,6 +198,7 @@ Revise o contrato inferido e os modelos reais. `db sign` confirma a estrutura e 
 | Falha de conexão/TLS | Confira URL, senha, rede e parâmetros do Neon; não desative TLS para contornar |
 | Tabela já existe | Você usou um banco não vazio ou misturou estratégias de inicialização |
 | Violação de assinatura | Confira `db verify`, contrato emitido e migrações pendentes |
+| `RUNTIME.TEMPORAL_UNAVAILABLE` ou cadastro 500 | Instale `temporal-polyfill@1.0.5` como dependência de execução e mantenha `import 'temporal-polyfill/full/global'` no início de `src/prisma/db.ts` |
 
 </details>
 

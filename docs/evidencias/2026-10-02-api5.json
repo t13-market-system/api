@@ -1,0 +1,133 @@
+{
+  "validatedAt": "2026-10-02T11:16:23.959Z",
+  "attempt": "api5",
+  "status": "PASS",
+  "method": "Comandos CMD e arquivos extraídos literalmente dos capítulos, em ordem; bancos isolados e navegação real no Edge.",
+  "versions": {
+    "node": "24.15.0",
+    "postgres": "18.6 (4e955f5)",
+    "tlsClientConnection": true,
+    "tlsReportedByDatabaseServer": false,
+    "prisma": "8.0.0-rc.15",
+    "ormPostgres": "8.0.0-rc.11",
+    "temporalPolyfill": "1.0.5"
+  },
+  "chapters": [
+    {
+      "name": "Capítulo 01 aprovado",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 02 aprovado com banco real",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 03 aprovado: CRUD real",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 04 aprovado",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 05 aprovado",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 06 aprovado: logs JSON e autenticação preservada",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 07 aprovado",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 08 aprovado em TypeScript e JavaScript compilado",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 09 aprovado com integração real",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 10 aprovado: geração e CRUD real de Cliente",
+      "status": "PASS"
+    },
+    {
+      "name": "Capítulo 11 aprovado: bancos sem registros remanescentes de testes",
+      "status": "PASS"
+    }
+  ],
+  "unitTests": 23,
+  "integrationTests": 1,
+  "coverage": {
+    "statements": 91.94,
+    "branches": 79.2,
+    "functions": 95.65,
+    "lines": 95.28
+  },
+  "browserAndFinalChecks": [
+    {
+      "at": "2026-10-02T11:08:13.107Z",
+      "name": "Matriz final compilada: cadastro, erros, JWT, autorização, cookies, CORS e exclusão",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:16.451Z",
+      "name": "Edge: Swagger renderiza 12 operações; Try it out cadastra e autentica; Authorize envia Bearer",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:16.640Z",
+      "name": "Edge: frontend em 5173, credentials include, cookie HttpOnly, escrita com Origin e logout",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:18.842Z",
+      "name": "Servidor compilado: cinco tentativas 401 e sexta 429",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:20.810Z",
+      "name": "Servidor compilado: 100 requisições permitidas, 101ª bloqueada e health permanece 200",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:20.811Z",
+      "name": "Logs sem JWT, chave secreta ou senha de teste",
+      "status": "PASS"
+    },
+    {
+      "at": "2026-10-02T11:08:20.811Z",
+      "name": "VALIDAÇÃO COMPLEMENTAR APROVADA",
+      "status": "PASS"
+    }
+  ],
+  "databases": [
+    {
+      "environment": "development",
+      "remainingUsers": 0,
+      "remainingClients": 0
+    },
+    {
+      "environment": "test",
+      "remainingUsers": 0,
+      "remainingClients": 0
+    }
+  ],
+  "literalFilesMatched": 40,
+  "ignoredPaths": [
+    ".env",
+    ".env.test",
+    "cookies.txt",
+    "node_modules",
+    "dist",
+    "logs",
+    "coverage"
+  ],
+  "deploymentReference": "npm ci → typecheck → test → build → migrate → verify → prune --omit=dev → npm start; npm ci restaura desenvolvimento.",
+  "limits": [
+    "Validação local nas versões indicadas; não garante versões futuras.",
+    "Renderização no GitHub e publicação HTTPS não executadas."
+  ]
+}

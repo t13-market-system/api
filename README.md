@@ -20,6 +20,8 @@
 
 Se `api` já existe, use outro diretório pai ou outra pasta vazia. No PowerShell, comandos npm podem precisar de `npm.cmd`/`npx.cmd`, sem alterar a política de execução.
 
+O [`.env.example`](.env.example) contém o mesmo modelo público do capítulo 1. Copie os valores necessários para o `.env` da **nova API**, preenchendo a conexão e gerando uma chave JWT própria. Se pretende aproveitar tabelas e um contrato existentes, leia a alternativa de adoção no [capítulo 2](docs/02-modelagem-e-sincronizacao-com-prisma.md); os campos do banco precisam corresponder aos serviços e ao gerador.
+
 ## 📚 Trilha completa
 
 | Etapa | Guia | Entrega e critério de avanço |
@@ -93,6 +95,7 @@ api/
 |---|---|
 | Prisma CLI | `8.0.0-rc.15` |
 | ORM PostgreSQL | `@prisma/orm-postgres@8.0.0-rc.11` |
+| Datas no Node.js 24 | `temporal-polyfill@1.0.5`; import global no cliente antes das consultas |
 | CLI engine | `@prisma/cli-engine@0.4.0`, correspondente à CLI |
 | TypeScript | `5.9.3`, `module` e `moduleResolution` em `NodeNext` |
 | Módulos | `type=module`; imports locais com extensão `.js` |
@@ -137,9 +140,9 @@ Após o capítulo 8, a interface fica em [http://localhost:3000/api-docs](http:/
 
 ## ✅ Validação e seus limites
 
-Os exemplos são identificados por arquivo e podem ser conferidos como uma sequência. A revisão inclui emissão dos contratos, compilação dos capítulos, testes sem banco, geração com Plop e execução do JavaScript compilado. Consulte o [registro da validação](docs/RELATORIO-DE-VALIDACAO.md) para resultados e verificações pendentes.
+**Os onze capítulos foram executados em sequência em uma pasta nova (`api5`), com PostgreSQL real e bancos separados para desenvolvimento e integração, em 2 de outubro de 2026.** Passaram os 23 testes sem banco, o teste de integração, os CRUDs reais, o build, a execução sem dependências de desenvolvimento e a interação com Swagger e cookies no Edge. Os 40 arquivos finais identificados no Markdown correspondem aos arquivos executados.
 
-**Conexão, migrações no seu PostgreSQL/Neon e integração real precisam ser executadas no seu ambiente.** O capítulo 11 fornece os comandos e critérios para concluir essa aprovação, sem confundir testes com banco substituído e testes com banco real.
+Consulte o [registro da validação e suas evidências](docs/RELATORIO-DE-VALIDACAO.md). A aprovação se refere às versões e ao ambiente registrados; repita o [capítulo 11](docs/11-validacao-ponta-a-ponta.md) na sua própria instalação. Renderização no GitHub e publicação HTTPS não fizeram parte da execução local.
 
 <details>
 <summary>🛠️ Como ler e copiar os exemplos</summary>

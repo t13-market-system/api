@@ -36,13 +36,14 @@ npm pkg set private=true --json
 ## 2. Instalar dependências de execução
 
 ```bat
-npm install --save-exact express@5.2.1 @prisma/orm-postgres@8.0.0-rc.11 dotenv@18.0.5 bcrypt@6.0.0 jsonwebtoken@9.0.3 zod@4.6.5 helmet@8.3.0 cors@2.8.6 express-rate-limit@8.7.0 cookie-parser@1.4.7 morgan@1.12.1 winston@3.19.0
+npm install --save-exact express@5.2.1 @prisma/orm-postgres@8.0.0-rc.11 temporal-polyfill@1.0.5 dotenv@18.0.5 bcrypt@6.0.0 jsonwebtoken@9.0.3 zod@4.6.5 helmet@8.3.0 cors@2.8.6 express-rate-limit@8.7.0 cookie-parser@1.4.7 morgan@1.12.1 winston@3.19.0
 ```
 
 | Pacotes | Função |
 |---|---|
 | `express` | HTTP, rotas e tratamento de erros assíncronos do Express 5 |
 | `@prisma/orm-postgres`, `dotenv` | Banco e carregamento do `.env`; necessários também em produção |
+| `temporal-polyfill` | Suporte a `Temporal.Instant`, usado por `DateTime` no Prisma 8; necessário no Node.js 24 |
 | `bcrypt`, `jsonwebtoken`, `cookie-parser` | Hash de senha, JWT e leitura de cookies |
 | `zod` | Validação e normalização das entradas |
 | `helmet`, `cors`, `express-rate-limit` | Cabeçalhos, política de origem e limites de requisições |

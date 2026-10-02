@@ -145,6 +145,7 @@ Antes das duas operações de banco, configure a conexão do ambiente de destino
 | `Cannot use import statement outside a module` | `type=module`; build com `NodeNext` |
 | Módulo local não encontrado em produção | Extensão `.js` nos imports; execute o build completo |
 | `contract.json` ausente | Emita contrato antes do build; mantenha fonte em `src/prisma` |
+| Cadastro 500 com `RUNTIME.TEMPORAL_UNAVAILABLE` | `temporal-polyfill@1.0.5` instalado em execução e import global no início de `src/prisma/db.ts` |
 | `ZodPipe` sem `.max()` | Aplique `.max()` antes de `.pipe(z.email())`, como nos exemplos |
 | Erro de conexão/assinatura | URL correta, migrações aplicadas e `db verify` |
 | 401 no Swagger | Login, token recente e Authorize preenchido com apenas o token |
