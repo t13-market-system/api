@@ -32,18 +32,18 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@prisma/orm-postgres": "^8.0.0-rc.11",
+    "@prisma/orm-postgres": "^8.0.0-rc.14",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.4",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
-    "dotenv": "^18.0.3",
-    "prisma": "^8.0.0-rc.15",
+    "dotenv": "^18.0.5",
+    "prisma": "^8.0.0-rc.14",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
