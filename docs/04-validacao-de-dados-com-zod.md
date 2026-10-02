@@ -113,6 +113,21 @@ router.delete('/users/:id', validate(userIdSchema), UserController.deleteUser);
 export default router;
 ```
 
+**Arquivo: `src/routes/index.ts`**
+
+Certifique-se de que este arquivo reúne as rotas e repassa os pedidos para `user.route.js`. Caso ainda não esteja configurado para importar o arquivo de rotas, substitua todo o conteúdo:
+
+<!-- file: src/routes/index.ts -->
+```typescript
+// Arquivo: src/routes/index.ts
+import { Router } from 'express';
+import userRoutes from './user.route.js';
+
+const routes = Router();
+routes.use(userRoutes);
+export default routes;
+```
+
 O controlador completo do capítulo 3 pode ser mantido. Sua verificação básica no cadastro é redundante após o middleware, mas não impede o funcionamento e não exige substituir parcialmente a classe.
 
 ## 4. Conferir rejeição e normalização
