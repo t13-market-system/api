@@ -117,40 +117,38 @@ export const toPublicUser = (user: UserRow) => ({
   createdAt: user.createdAt,
 });
 
-export class UserService {
-  static async createUser(data: CreateUserInput) {
-    return db.orm.public.User.create({
-      email: data.email,
-      name: data.name ?? null,
-      password: await bcrypt.hash(data.password, 12),
-    });
-  }
+export async function createUser(data: CreateUserInput) {
+  return db.orm.public.User.create({
+    email: data.email,
+    name: data.name ?? null,
+    password: await bcrypt.hash(data.password, 12),
+  });
+}
 
-  static async getAllUsers() {
-    return db.orm.public.User.all();
-  }
+export async function getAllUsers() {
+  return db.orm.public.User.all();
+}
 
-  static async getUserById(id: number) {
-    const user = await db.orm.public.User.first({ id });
-    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
-    return user;
-  }
+export async function getUserById(id: number) {
+  const user = await db.orm.public.User.first({ id });
+  if (!user) throw new HttpError(404, 'Usuário não encontrado.');
+  return user;
+}
 
-  static async updateUser(id: number, data: UpdateUserInput) {
-    const changes: UpdateUserInput = {};
-    if (data.name !== undefined) changes.name = data.name;
-    if (data.email !== undefined) changes.email = data.email;
-    if (data.password !== undefined) changes.password = await bcrypt.hash(data.password, 12);
-    if (Object.keys(changes).length === 0) throw new HttpError(400, 'Informe pelo menos um campo.');
-    const user = await db.orm.public.User.where({ id }).update(changes);
-    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
-    return user;
-  }
+export async function updateUser(id: number, data: UpdateUserInput) {
+  const changes: UpdateUserInput = {};
+  if (data.name !== undefined) changes.name = data.name;
+  if (data.email !== undefined) changes.email = data.email;
+  if (data.password !== undefined) changes.password = await bcrypt.hash(data.password, 12);
+  if (Object.keys(changes).length === 0) throw new HttpError(400, 'Informe pelo menos um campo.');
+  const user = await db.orm.public.User.where({ id }).update(changes);
+  if (!user) throw new HttpError(404, 'Usuário não encontrado.');
+  return user;
+}
 
-  static async deleteUser(id: number) {
-    const user = await db.orm.public.User.where({ id }).delete();
-    if (!user) throw new HttpError(404, 'Usuário não encontrado.');
-  }
+export async function deleteUser(id: number) {
+  const user = await db.orm.public.User.where({ id }).delete();
+  if (!user) throw new HttpError(404, 'Usuário não encontrado.');
 }
 ```
 
@@ -170,7 +168,7 @@ Crie este arquivo e copie todo o conteúdo abaixo. Recebe dados do pedido, chama
 ```typescript
 // Arquivo: src/controllers/user.controller.ts
 import type { Request, Response } from 'express';
-import { UserService, toPublicUser } from '../services/user.service.js';
+import { createUser, getAllUsers, getUserById, updateUser, deleteUser, toPublicUser } from '../services/user.service.js';
 import { HttpError } from '../lib/http-error.js';
 
 const readId = (req: Request) => {
@@ -188,20 +186,20 @@ export class UserController {
     if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       throw new HttpError(400, 'E-mail e senha obrigatórios.');
     }
-    const user = await UserService.createUser({ email, password, name });
+    const user = await createUser({ email, password, name });
     res.status(201).json(toPublicUser(user));
   }
   static async getAllUsers(_req: Request, res: Response) {
-    res.json((await UserService.getAllUsers()).map(toPublicUser));
+    res.json((await getAllUsers()).map(toPublicUser));
   }
   static async getUserById(req: Request, res: Response) {
-    res.json(toPublicUser(await UserService.getUserById(readId(req))));
+    res.json(toPublicUser(await getUserById(readId(req))));
   }
   static async updateUser(req: Request, res: Response) {
-    res.json(toPublicUser(await UserService.updateUser(readId(req), req.body ?? {})));
+    res.json(toPublicUser(await updateUser(readId(req), req.body ?? {})));
   }
   static async deleteUser(req: Request, res: Response) {
-    await UserService.deleteUser(readId(req));
+    await deleteUser(readId(req));
     res.status(204).send();
   }
 }

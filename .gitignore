@@ -1,3 +1,9 @@
+# Arquivo: .gitignore
+node_modules/
+dist/
+coverage/
+logs/
+cookies.txt
 .env
-node_modules
-anotacoes.txt
+.env.*
+!.env.example

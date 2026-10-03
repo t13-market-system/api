@@ -1,5 +1,5 @@
 Fluxo Rápido (Local/Dev - SEM gerar arquivo de migration):
-1 - npx prisma contract emit
+1 - npx prisma contract:emit
 2 - npx prisma db update
 3 - npx prisma@8.0.0-rc.13 skills sync
 

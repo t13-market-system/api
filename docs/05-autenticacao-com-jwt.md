@@ -225,25 +225,25 @@ Substitua todo o conteúdo do arquivo existente. Recebe dados do pedido, chama o
 ```typescript
 // Arquivo: src/controllers/user.controller.ts
 import type { Request, Response } from 'express';
-import { UserService, toPublicUser } from '../services/user.service.js';
+import { createUser, getUserById, updateUser, deleteUser, toPublicUser } from '../services/user.service.js';
 
 export class UserController {
   static async createUser(req: Request, res: Response) {
-    const user = await UserService.createUser(req.body);
+    const user = await createUser(req.body);
     res.status(201).json(toPublicUser(user));
   }
   static async getAllUsers(_req: Request, res: Response) {
-    const user = await UserService.getUserById(res.locals.userId);
+    const user = await getUserById(res.locals.userId);
     res.json([toPublicUser(user)]);
   }
   static async getUserById(req: Request, res: Response) {
-    res.json(toPublicUser(await UserService.getUserById(Number(req.params.id))));
+    res.json(toPublicUser(await getUserById(Number(req.params.id))));
   }
   static async updateUser(req: Request, res: Response) {
-    res.json(toPublicUser(await UserService.updateUser(Number(req.params.id), req.body)));
+    res.json(toPublicUser(await updateUser(Number(req.params.id), req.body)));
   }
   static async deleteUser(req: Request, res: Response) {
-    await UserService.deleteUser(Number(req.params.id));
+    await deleteUser(Number(req.params.id));
     res.status(204).send();
   }
 }

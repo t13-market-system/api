@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { UserService } from '../services/user.service';
+import { createUser, getAllUsers, getUserById, updateUser, deleteUser } from '../services/user.service';
 
 export class UserController {
   // POST - criar novo usuário
@@ -7,7 +7,7 @@ export class UserController {
     const { name, email, password } = req.body;
 
     try {
-      const novoUser = await UserService.createUser({ name, email, password });
+      const novoUser = await createUser({ name, email, password });
       
       console.log(`Usuário criado com sucesso: ${novoUser.email}`);
       return res.status(201).json(novoUser);
@@ -25,7 +25,7 @@ export class UserController {
   // GET - listar todos os usuários
   static async getAllUsers(req: Request, res: Response) {
     try {
-      const users = await UserService.getAllUsers();
+      const users = await getAllUsers();
       return res.status(200).json(users);
     } catch (error) {
       console.error('Erro ao listar usuários:', error);
@@ -38,7 +38,7 @@ export class UserController {
     const { id } = req.params;
 
     try {
-      const user = await UserService.getUserById(Number(id));
+      const user = await getUserById(Number(id));
       return res.status(200).json(user);
     } catch (error: any) {
       console.error('Erro ao buscar usuário:', error);
@@ -56,7 +56,7 @@ export class UserController {
     const { name, email, password } = req.body;
 
     try {
-      const userAtualizado = await UserService.updateUser(Number(id), { name, email, password });
+      const userAtualizado = await updateUser(Number(id), { name, email, password });
       
       console.log(`Usuário atualizado com sucesso: ${userAtualizado.email}`);
       return res.status(200).json(userAtualizado);
@@ -79,7 +79,7 @@ export class UserController {
     const { id } = req.params;
 
     try {
-      await UserService.deleteUser(Number(id));
+      await deleteUser(Number(id));
       
       console.log(`Usuário removido com sucesso: id ${id}`);
       return res.status(200).json({ message: 'Usuário removido com sucesso.' });
