@@ -30,7 +30,7 @@
               "emailCliente": {
                 "nullable": true,
                 "type": {
-                  "codecId": "sql/varchar@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -44,7 +44,7 @@
               "nomeCliente": {
                 "nullable": true,
                 "type": {
-                  "codecId": "sql/varchar@1",
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               }
@@ -234,8 +234,8 @@
             "cliente": {
               "columns": {
                 "email_cliente": {
-                  "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
                   "nullable": true
                 },
                 "id_cliente": {
@@ -248,8 +248,8 @@
                   "nullable": false
                 },
                 "nome_cliente": {
-                  "codecId": "sql/varchar@1",
-                  "nativeType": "character varying",
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
                   "nullable": true
                 }
               },
@@ -394,7 +394,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "0a290316529d86579865bf5b51988c540098ed83fead7cbe86cf7da4a8c6ef95"
+    "storageHash": "38085736cfacf6293b3002fa52b40c1aaa581d9000d178ff56e91fb166d4884f"
   },
   "capabilities": {
     "postgres": {
@@ -409,6 +409,8 @@
       "checkConstraint": true,
       "defaultInInsert": true,
       "enums": true,
+      "insertOnConflictSkip": true,
+      "insertOnConflictWithoutTarget": true,
       "lateral": true,
       "returning": true,
       "scalarList": true
